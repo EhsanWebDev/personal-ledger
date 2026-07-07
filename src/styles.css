@@ -105,9 +105,12 @@ h1 span {
 
 .limitStrip div {
   position: relative;
-  height: 10px;
+  height: 12px;
+  border: 1px solid rgba(238, 245, 234, 0.22);
   border-radius: 999px;
-  background: linear-gradient(90deg, #65c98b 0 86%, #f0c448 86% 91%, #f05a4f 91%);
+  background:
+    linear-gradient(90deg, transparent 0 86%, #f0c448 86% 91%, #f05a4f 91%),
+    transparent;
   overflow: visible;
 }
 
@@ -115,7 +118,7 @@ h1 span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.42);
+  background: #4fdf7a;
   transition: width 500ms ease;
 }
 
@@ -181,26 +184,6 @@ h1 span {
   margin-bottom: 14px;
 }
 
-.panelHead output {
-  min-width: 72px;
-  padding: 10px;
-  border-radius: 8px;
-  color: #101412;
-  background: #65c98b;
-  font-size: 24px;
-  font-weight: 900;
-  text-align: center;
-}
-
-.panelHead output.edge {
-  background: #f0c448;
-}
-
-.panelHead output.danger {
-  color: #fff8d6;
-  background: #f05a4f;
-}
-
 form {
   display: grid;
   gap: 12px;
@@ -224,6 +207,16 @@ input {
   background: #101412;
 }
 
+input[type="number"] {
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .readingGrid {
   display: grid;
   grid-template-columns: repeat(2, max-content);
@@ -236,6 +229,21 @@ input {
   font-size: 20px;
   font-weight: 800;
   text-align: center;
+}
+
+.stepControls {
+  display: none;
+}
+
+.stepControls button {
+  width: 44px;
+  min-height: 38px;
+  border: 1px solid rgba(238, 245, 234, 0.14);
+  border-radius: 8px;
+  color: #fff8d6;
+  background: #243128;
+  font-size: 22px;
+  font-weight: 900;
 }
 
 button[type="submit"] {
@@ -296,6 +304,21 @@ button[type="submit"] {
 
   .meterCard:nth-child(3) {
     animation-delay: 140ms;
+  }
+}
+
+@media (max-width: 620px) {
+  .panelHead {
+    display: none;
+  }
+
+  .stepControls {
+    grid-template-columns: repeat(2, 44px);
+    gap: 8px;
+  }
+
+  label:focus-within .stepControls {
+    display: grid;
   }
 }
 

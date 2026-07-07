@@ -7,6 +7,21 @@ const defaultMeters = ["Main meter", "Upstairs meter", "Backup meter"];
 const today = () => new Date().toISOString().slice(0, 10);
 const unitsFor = (current, previous) => Math.max(0, Number(current || 0) - Number(previous || 0));
 const bandFor = (units) => (units >= 200 ? "danger" : units > 190 ? "edge" : "calm");
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const formatRecentDate = (value, now = new Date()) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const diffHours = Math.floor((now - date) / 36e5);
+  const diffDays = Math.floor(diffHours / 24);
+  const relative = diffHours < 24 ? `${Math.max(1, diffHours)}hr ago` : diffDays === 1 ? "yesterday" : `${diffDays} days ago`;
+  const hours = date.getHours() % 12 || 12;
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = date.getHours() < 12 ? "AM" : "PM";
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${relative} at ${hours}:${minutes} ${ampm} ${day}-${monthNames[date.getMonth()]}`;
+};
 
 function App() {
   const [readings, setReadings] = useState([]);
@@ -28,25 +43,24 @@ function App() {
     });
   }, [readings]);
 
-  const activeLatest = meters.find((meter) => meter.name === activeMeter)?.latest;
-  const previewUnits = unitsFor(form.current_reading, form.previous_reading);
-  const totalUnits = meters.reduce((sum, meter) => sum + meter.units, 0);
+  const activeMeterData = meters.find((meter) => meter.name === activeMeter);
+  const activeLatest = activeMeterData?.latest;
+  const activeUnits = activeMeterData?.units ?? 0;
 
   useEffect(() => {
     setForm((old) => ({
       ...old,
-      previous_reading: activeLatest?.current_reading ?? old.previous_reading,
+      current_reading: activeLatest?.current_reading ?? 0,
+      previous_reading: activeLatest?.previous_reading ?? 0,
     }));
-  }, [activeMeter, activeLatest?.current_reading]);
+  }, [activeMeter, activeLatest?.current_reading, activeLatest?.previous_reading]);
+
+  function stepReading(field, by) {
+    setForm((old) => ({ ...old, [field]: String(Math.max(0, Number(old[field] || 0) + by)) }));
+  }
 
   async function loadReadings() {
     if (!supabase) return;
-    try {
-      await ensureSession();
-    } catch (error) {
-      setMessage(error.message);
-      return;
-    }
 
     const { data, error } = await supabase
       .from("electricity_meter_readings")
@@ -56,15 +70,6 @@ function App() {
 
     if (error) setMessage(error.message);
     else setReadings(data ?? []);
-  }
-
-  async function ensureSession() {
-    const { data: existing } = await supabase.auth.getSession();
-    if (existing.session) return existing.session;
-
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) throw new Error(`${error.message}. Enable anonymous sign-ins in Supabase Auth.`);
-    return data.session;
   }
 
   async function saveReading(event) {
@@ -78,14 +83,6 @@ function App() {
     }
 
     setBusy(true);
-    try {
-      await ensureSession();
-    } catch (error) {
-      setBusy(false);
-      setMessage(error.message);
-      return;
-    }
-
     const { error } = await supabase.from("electricity_meter_readings").insert({
       meter_name: activeMeter,
       current_reading: current,
@@ -98,7 +95,7 @@ function App() {
       setMessage(error.message);
     } else {
       setMessage("Reading saved.");
-      setForm({ current_reading: "", previous_reading: current, reading_date: today() });
+      setForm({ current_reading: current, previous_reading: previous, reading_date: today() });
       loadReadings();
     }
   }
@@ -119,14 +116,14 @@ function App() {
       <header className="mast">
         <div>
           <p className="eyebrow">Personal Ledger</p>
-          <h1>{totalUnits}<span> units</span></h1>
+          <h1>{activeUnits}<span> units</span></h1>
         </div>
       </header>
 
       <section className="limitStrip" aria-label="Consumption limits">
         <span>0</span>
         <div>
-          <i style={{ width: `${Math.min(100, (totalUnits / 220) * 100)}%` }} />
+          <i style={{ width: `${Math.min(100, (activeUnits / 220) * 100)}%` }} />
           <b style={{ left: "86%" }}>190</b>
           <b style={{ left: "91%" }}>200</b>
         </div>
@@ -154,16 +151,23 @@ function App() {
             <p className="eyebrow">Meter readings</p>
             <h2>{activeMeter}</h2>
           </div>
-          <output className={bandFor(previewUnits)}>{previewUnits}</output>
         </div>
         <div className="readingGrid">
           <label>
             Current
-            <input className="meterInput" inputMode="numeric" maxLength="5" required value={form.current_reading} onChange={(event) => setForm({ ...form, current_reading: event.target.value })} />
+            <input className="meterInput" type="number" min="0" step="1" required value={form.current_reading} onChange={(event) => setForm({ ...form, current_reading: event.target.value })} />
+            <span className="stepControls">
+              <button type="button" aria-label="Decrease current reading" onClick={() => stepReading("current_reading", -1)}>-</button>
+              <button type="button" aria-label="Increase current reading" onClick={() => stepReading("current_reading", 1)}>+</button>
+            </span>
           </label>
           <label>
             Previous
-            <input className="meterInput" inputMode="numeric" maxLength="5" required value={form.previous_reading} onChange={(event) => setForm({ ...form, previous_reading: event.target.value })} />
+            <input className="meterInput" type="number" min="0" step="1" required value={form.previous_reading} onChange={(event) => setForm({ ...form, previous_reading: event.target.value })} />
+            <span className="stepControls">
+              <button type="button" aria-label="Decrease previous reading" onClick={() => stepReading("previous_reading", -1)}>-</button>
+              <button type="button" aria-label="Increase previous reading" onClick={() => stepReading("previous_reading", 1)}>+</button>
+            </span>
           </label>
         </div>
         <label>
@@ -180,7 +184,7 @@ function App() {
           <article key={reading.id}>
             <span>{reading.meter_name}</span>
             <strong>{unitsFor(reading.current_reading, reading.previous_reading)} units</strong>
-            <time>{reading.reading_date}</time>
+            <time>{formatRecentDate(reading.created_at ?? reading.reading_date)}</time>
           </article>
         ))}
       </section>
