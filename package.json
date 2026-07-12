@@ -9,6 +9,8 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@getlimelight/sdk": "^0.7.10",
+    "@radix-ui/react-dialog": "^1.1.19",
     "@supabase/supabase-js": "2.57.4",
     "react": "19.2.7",
     "react-dom": "19.2.7"

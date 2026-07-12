@@ -1,4 +1,17 @@
 :root {
+  --bg: #101412;
+  --surface: rgba(24, 33, 29, 0.72);
+  --surface-solid: #18211d;
+  --glass: rgba(24, 33, 29, 0.52);
+  --glass-border: rgba(238, 245, 234, 0.14);
+  --text: #eef5ea;
+  --heading: #fff8d6;
+  --muted: #8fa095;
+  --accent: #f0c448;
+  --accent-rgb: 240, 196, 72;
+  --accent-ink: #101412;
+  --glow-a: rgba(240, 196, 72, 0.28);
+  --glow-b: rgba(78, 223, 122, 0.12);
   color: #eef5ea;
   background: #101412;
   font-family:
@@ -7,17 +20,41 @@
   text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="aurora"] {
+  --bg: #0b1020; --surface: rgba(24, 28, 54, 0.66); --surface-solid: #171a32; --glass: rgba(24, 28, 54, 0.48); --glass-border: rgba(244, 240, 255, 0.15); --text: #f4f0ff; --heading: #fffaff; --muted: #aaa6c2; --accent: #a78bfa; --accent-rgb: 167, 139, 250; --accent-ink: #171126; --glow-a: rgba(139, 92, 246, 0.34); --glow-b: rgba(236, 72, 153, 0.16);
+}
+
+:root[data-theme="tide"] {
+  --bg: #0d110b; --surface: rgba(29, 39, 20, 0.66); --surface-solid: #1b2514; --glass: rgba(29, 39, 20, 0.48); --glass-border: rgba(244, 255, 224, 0.15); --text: #eff8df; --heading: #f9ffe9; --muted: #9ca989; --accent: #a2d729; --accent-rgb: 162, 215, 41; --accent-ink: #152000; --glow-a: rgba(162, 215, 41, 0.3); --glow-b: rgba(93, 131, 19, 0.16);
+}
+
+:root[data-theme="ember"] {
+  --bg: #1b0d18; --surface: rgba(58, 25, 48, 0.66); --surface-solid: #35172d; --glass: rgba(58, 25, 48, 0.48); --glass-border: rgba(255, 239, 247, 0.15); --text: #fff0f7; --heading: #fff8fb; --muted: #bca0b0; --accent: #ff9fc7; --accent-rgb: 255, 159, 199; --accent-ink: #2b0c1d; --glow-a: rgba(221, 72, 139, 0.32); --glow-b: rgba(255, 180, 205, 0.15);
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
+  position: relative;
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
   background:
     radial-gradient(circle at 50% -10%, rgba(240, 196, 72, 0.26), transparent 34%),
     #101412;
+}
+
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: -30vmax;
+  content: "";
+  background: radial-gradient(circle at 32% 25%, var(--glow-a), transparent 25%), radial-gradient(circle at 72% 68%, var(--glow-b), transparent 24%);
+  transform: translate3d(-3%, -2%, 0) scale(1.05);
+  animation: ambientGlow 18s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+  pointer-events: none;
 }
 
 button,
@@ -40,7 +77,84 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 18px;
+  padding: 18px 18px calc(118px + env(safe-area-inset-bottom));
+}
+
+.bottomNav {
+  position: fixed;
+  z-index: 10;
+  right: max(16px, calc((100vw - 528px) / 2));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: max(16px, calc((100vw - 528px) / 2));
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(35, 45, 40, 0.78), rgba(14, 18, 16, 0.68));
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.bottomNav button {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 18px;
+  color: #8fa095;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  transition: color 320ms cubic-bezier(0.32, 0.72, 0, 1), transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.bottomNav button:active {
+  transform: scale(0.94);
+}
+
+.bottomNav button.active {
+  color: #fff8d6;
+}
+
+.navIcon {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 12px;
+  transition: background 320ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 320ms cubic-bezier(0.32, 0.72, 0, 1), transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.bottomNav button.active .navIcon {
+  color: #101412;
+  background: #f0c448;
+  box-shadow: 0 6px 18px rgba(240, 196, 72, 0.25), inset 0 1px rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.bottomNav svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.overviewIcon svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .authShell {
@@ -65,6 +179,200 @@ button {
   justify-content: space-between;
   gap: 14px;
   padding-top: 18px;
+}
+
+.homeMast {
+  min-height: 220px;
+  align-items: end;
+}
+
+.homeMast h1 {
+  font-size: clamp(48px, 13vw, 72px);
+  line-height: 0.86;
+}
+
+.homeMast h1 span {
+  font-size: 0.58em;
+}
+
+.homeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.homeGrid button {
+  display: grid;
+  min-height: 190px;
+  padding: 16px;
+  border: 1px solid rgba(238, 245, 234, 0.12);
+  border-radius: 18px;
+  color: #eef5ea;
+  background: linear-gradient(145deg, rgba(36, 49, 40, 0.92), rgba(24, 33, 29, 0.78));
+  text-align: left;
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1), border-color 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.homeGrid button:active {
+  transform: scale(0.98);
+}
+
+.homeGrid button:hover {
+  border-color: rgba(240, 196, 72, 0.35);
+}
+
+.overviewIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  color: #f0c448;
+  background: rgba(240, 196, 72, 0.1);
+}
+
+.homeGrid small {
+  align-self: end;
+  color: #aebbb3;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.homeGrid strong {
+  color: #fff8d6;
+  font-size: 42px;
+  line-height: 0.9;
+}
+
+.homeGrid button > span:last-child,
+.morePanel > p:last-child {
+  color: #8fa095;
+  font-size: 12px;
+}
+
+.morePanel {
+  display: grid;
+  gap: 26px;
+  padding-top: 24px;
+}
+
+.moreIntro {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: end;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.12), 0 24px 70px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.morePanel h1 {
+  font-size: clamp(38px, 10vw, 56px);
+}
+
+.moreIntro > div > p:last-child {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.themeCard {
+  position: relative;
+  display: grid;
+  gap: 13px;
+  min-height: 170px;
+  padding: 8px 8px 15px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1), border-color 420ms cubic-bezier(0.32, 0.72, 0, 1), background 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.themeCard:hover { transform: translateY(-3px); }
+.themeCard:active { transform: scale(0.98); }
+.themeCard.active { border-color: rgba(var(--accent-rgb), 0.62); background: rgba(var(--accent-rgb), 0.08); }
+
+.themePreview {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 6px;
+  height: 84px;
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: radial-gradient(circle at 85% 5%, var(--swatch-accent), transparent 46%), var(--swatch-bg);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.themePreview i { border-radius: 9px; background: rgba(255, 255, 255, 0.11); backdrop-filter: blur(8px); }
+.themePreview i:first-child { grid-row: span 2; }
+.themeCard > span:nth-child(2) { display: grid; gap: 3px; padding-inline: 7px; }
+.themeCard strong { font-size: 14px; }
+.themeCard small { color: var(--muted); font-size: 11px; }
+.themeCheck { position: absolute; right: 14px; bottom: 17px; display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: var(--accent-ink); background: var(--accent); font-size: 12px; font-style: normal; opacity: 0; transform: scale(0.7); transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1), transform 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+.themeCard.active .themeCheck { opacity: 1; transform: scale(1); }
+
+/* Theme layer keeps the existing ledger components coherent without duplicating them. */
+body { color: var(--text); background: var(--bg); transition: background-color 700ms cubic-bezier(0.32, 0.72, 0, 1), color 700ms cubic-bezier(0.32, 0.72, 0, 1); }
+h1, .homeGrid strong, .meterCard strong, .purchaseCardHead strong, .dialogHead h2 { color: var(--heading); }
+.eyebrow, .textButton, .readingControl button { color: var(--accent); }
+.overviewIcon { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+.bottomNav button.active { color: var(--heading); }
+.bottomNav button.active .navIcon, button[type="submit"], .purchaseFab, .categoryFilters button.active { color: var(--accent-ink); background: var(--accent); box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.24), inset 0 1px rgba(255,255,255,.4); }
+.bottomNav, .homeGrid button, .entryPanel, .authPanel, .meterCard, .history article, .purchaseHistory .purchaseCard { background-color: var(--surface); }
+.purchaseMast, .purchaseDialog { background-color: var(--surface-solid); }
+:focus-visible { outline-color: var(--accent); }
+
+@keyframes ambientGlow {
+  to { transform: translate3d(5%, 4%, 0) scale(1.14) rotate(5deg); }
+}
+
+.mastNote {
+  margin-top: 12px;
+  color: #aebbb3;
+  font-size: 14px;
+}
+
+.purchaseMast {
+  min-height: 155px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid rgba(240, 196, 72, 0.28);
+  border-radius: 10px;
+  background: radial-gradient(circle at 92% 5%, rgba(240, 196, 72, 0.2), transparent 35%), #18211d;
+}
+
+.purchaseMast h1 {
+  font-size: clamp(40px, 11vw, 58px);
+}
+
+.purchaseCount {
+  display: grid;
+  min-width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(240, 196, 72, 0.45);
+  border-radius: 50%;
+  color: #f0c448;
+  font-size: 14px;
+  font-weight: 900;
 }
 
 h1,
@@ -219,31 +527,74 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .readingGrid {
   display: grid;
-  grid-template-columns: repeat(2, max-content);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.purchaseFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .meterInput {
-  width: 9ch;
+  min-width: 0;
   min-height: 58px;
+  border: 0;
+  border-right: 1px solid rgba(238, 245, 234, 0.12);
+  border-left: 1px solid rgba(238, 245, 234, 0.12);
+  border-radius: 0;
+  padding: 0 4px;
   font-size: 20px;
   font-weight: 800;
   text-align: center;
 }
 
-.stepControls {
-  display: none;
+.previousInput {
+  min-height: 60px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
 }
 
-.stepControls button {
-  width: 44px;
-  min-height: 38px;
-  border: 1px solid rgba(238, 245, 234, 0.14);
-  border-radius: 8px;
-  color: #fff8d6;
-  background: #243128;
-  font-size: 22px;
-  font-weight: 900;
+.readingControl {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  overflow: hidden;
+  border: 1px solid rgba(238, 245, 234, 0.18);
+  border-radius: 10px;
+  background: #101412;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.readingControl:focus-within {
+  border-color: #f0c448;
+  box-shadow: 0 0 0 3px rgba(240, 196, 72, 0.16);
+}
+
+.readingControl button {
+  min-height: 58px;
+  border: 0;
+  padding: 0;
+  color: #f0c448;
+  background: #202b25;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.readingControl button:hover {
+  background: #2a382f;
+}
+
+.readingControl button:active {
+  background: #34463a;
+}
+
+.readingControl > :focus-visible {
+  position: relative;
+  z-index: 1;
+  outline-offset: -3px;
 }
 
 button[type="submit"] {
@@ -253,6 +604,169 @@ button[type="submit"] {
   color: #101412;
   background: #f0c448;
   font-weight: 900;
+}
+
+.purchaseFormActions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.purchaseFormActions .secondaryButton {
+  min-height: 42px;
+  border: 1px solid rgba(238, 245, 234, 0.18);
+  border-radius: 8px;
+  color: #eef5ea;
+  background: #243128;
+  font-weight: 800;
+}
+
+.purchaseFab {
+  position: fixed;
+  z-index: 9;
+  right: max(24px, calc((100vw - 512px) / 2));
+  bottom: calc(116px + env(safe-area-inset-bottom));
+  display: grid;
+  width: 58px;
+  min-height: 58px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  color: #101412;
+  background: #f0c448;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34), 0 5px 18px rgba(240, 196, 72, 0.2), inset 0 1px rgba(255, 255, 255, 0.55);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.purchaseFab:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.38), 0 7px 22px rgba(240, 196, 72, 0.26), inset 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.purchaseFab:active {
+  transform: scale(0.97);
+}
+
+.purchaseFab svg,
+.dialogClose svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.purchaseFab svg {
+  width: 25px;
+  height: 25px;
+}
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 9, 7, 0.74);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: veilIn 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.purchaseDialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100vw - 32px), 520px);
+  max-height: min(760px, calc(100dvh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 20px 110px;
+  transform: translate(-50%, -50%);
+  padding: 24px;
+  border: 1px solid rgba(240, 196, 72, 0.22);
+  border-radius: 28px;
+  color: #eef5ea;
+  background: radial-gradient(circle at 90% 0%, rgba(240, 196, 72, 0.14), transparent 34%), #18211d;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), inset 0 1px rgba(255, 255, 255, 0.08);
+  animation: dialogIn 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.dialogHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.dialogHead h2 {
+  color: #fff8d6;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dialogHead p:last-child {
+  margin-top: 9px;
+  color: #8fa095;
+  font-size: 13px;
+}
+
+.dialogClose {
+  display: grid;
+  flex: 0 0 auto;
+  width: 42px;
+  min-height: 42px;
+  place-items: center;
+  border: 1px solid rgba(238, 245, 234, 0.14);
+  border-radius: 50%;
+  color: #c5d0c8;
+  background: rgba(16, 20, 18, 0.72);
+}
+
+.purchaseActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.purchaseActions .iconButton {
+  display: grid;
+  width: 38px;
+  min-height: 38px;
+  place-items: center;
+  border: 1px solid rgba(238, 245, 234, 0.16);
+  border-radius: 8px;
+  color: #fff8d6;
+  background: rgba(36, 49, 40, 0.72);
+}
+
+.purchaseActions .iconButton:hover {
+  border-color: rgba(240, 196, 72, 0.45);
+  background: #2c3a30;
+}
+
+.purchaseActions svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.purchaseActions .deleteButton {
+  color: #ffc2ba;
+}
+
+.purchaseActions .deleteButton:hover {
+  border-color: rgba(240, 90, 79, 0.6);
+  background: #3a1918;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .message {
@@ -266,8 +780,233 @@ button[type="submit"] {
   padding-bottom: 28px;
 }
 
+.purchaseHistory {
+  padding-bottom: 104px;
+}
+
 .history h2 {
   font-size: 18px;
+}
+
+.historyHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.textButton {
+  min-height: 40px;
+  border: 0;
+  padding: 0 2px;
+  color: #f0c448;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.listMast {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0 8px;
+}
+
+.listMast h1 {
+  font-size: clamp(34px, 10vw, 48px);
+}
+
+.listMast > span {
+  display: grid;
+  min-width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(240, 196, 72, 0.32);
+  border-radius: 50%;
+  color: #f0c448;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.backButton {
+  width: 44px;
+  min-height: 44px;
+  border: 1px solid rgba(238, 245, 234, 0.14);
+  border-radius: 50%;
+  color: #fff8d6;
+  background: #18211d;
+  font-size: 22px;
+}
+
+.allReadings {
+  gap: 10px;
+}
+
+.allReadingsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clearButton {
+  min-height: 40px;
+  border: 1px solid rgba(240, 90, 79, 0.38);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #ffc2ba;
+  background: rgba(58, 25, 24, 0.72);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.clearButton:hover {
+  border-color: rgba(240, 90, 79, 0.72);
+  background: #3a1918;
+}
+
+.search {
+  display: block;
+  width: min(190px, 48vw);
+}
+
+.search input {
+  min-height: 38px;
+  padding-inline: 11px;
+  font-size: 13px;
+}
+
+.collectionHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 5px;
+}
+
+.collectionHead .eyebrow {
+  margin-bottom: 4px;
+}
+
+.categoryFilters {
+  display: flex;
+  gap: 7px;
+  margin: 4px -18px 6px;
+  padding: 4px 18px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categoryFilters::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryFilters button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid rgba(238, 245, 234, 0.12);
+  border-radius: 999px;
+  padding: 0 13px;
+  color: #aebbb3;
+  background: rgba(24, 33, 29, 0.74);
+  font-size: 12px;
+  font-weight: 800;
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), color 260ms cubic-bezier(0.32, 0.72, 0, 1), background 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.categoryFilters button.active {
+  border-color: rgba(240, 196, 72, 0.45);
+  color: #101412;
+  background: #f0c448;
+}
+
+.purchaseCards {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.purchaseHistory .purchaseCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 13px 16px;
+  padding: 16px;
+  border: 1px solid rgba(238, 245, 234, 0.1);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(30, 41, 35, 0.94), rgba(21, 29, 25, 0.84));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.purchaseCardHead {
+  display: flex;
+  grid-column: 1 / -1;
+  min-width: 0;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.purchaseCardHead b {
+  min-width: 0;
+  color: #eef5ea;
+  font-size: 15px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.purchaseCardHead strong {
+  flex: 0 0 auto;
+  color: #fff8d6;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.purchaseMeta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.purchaseMeta time {
+  color: #8fa095;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.categoryTag {
+  display: inline-flex;
+  min-height: 27px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  color: #d9c980;
+  background: rgba(240, 196, 72, 0.09);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.emptyState {
+  padding: 18px;
+  border: 1px dashed rgba(238, 245, 234, 0.18);
+  border-radius: 8px;
+  color: #aebbb3;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .history article {
@@ -307,18 +1046,13 @@ button[type="submit"] {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
 @media (max-width: 620px) {
   .panelHead {
     display: none;
-  }
-
-  .stepControls {
-    grid-template-columns: repeat(2, 44px);
-    gap: 8px;
-  }
-
-  label:focus-within .stepControls {
-    display: grid;
   }
 }
 
@@ -330,5 +1064,176 @@ button[type="submit"] {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes veilIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes dialogInTop {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 640px) {
+  .purchaseDialog {
+    top: max(12px, env(safe-area-inset-top));
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-height: calc(100vh - 24px - env(safe-area-inset-top));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+    transform: none;
+    padding: 20px;
+    border-radius: 24px;
+    animation-name: dialogInTop;
+  }
+
+  .purchaseDialog input {
+    font-size: 16px;
+  }
+
+  .purchaseFields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Keep theme tokens last so component-level defaults cannot override them. */
+body::before {
+  z-index: 0;
+  opacity: 0.92;
+  background: radial-gradient(circle at 25% 22%, var(--glow-a), transparent 29%);
+  animation: ambientDriftTop 26s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform, opacity;
+}
+
+body::after {
+  position: fixed;
+  z-index: 0;
+  inset: -34vmax;
+  content: "";
+  opacity: 0.72;
+  background: radial-gradient(circle at 72% 70%, var(--glow-b), transparent 28%);
+  transform: translate3d(4%, 3%, 0) scale(1.08);
+  animation: ambientDriftLow 34s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.appShell,
+.authShell {
+  position: relative;
+  z-index: 1;
+}
+
+h1,
+h1 span,
+.homeGrid strong,
+.meterCard strong,
+.history strong,
+.purchaseCardHead b,
+.purchaseCardHead strong,
+.dialogHead h2 {
+  color: var(--heading);
+}
+
+.eyebrow,
+.textButton,
+.readingControl button,
+.purchaseCount,
+.categoryTag,
+.bottomNav button.active {
+  color: var(--accent);
+}
+
+.overviewIcon {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.bottomNav button.active .navIcon,
+button[type="submit"],
+.purchaseFab,
+.categoryFilters button.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: 0 7px 22px rgba(var(--accent-rgb), 0.3), inset 0 1px rgba(255, 255, 255, 0.48);
+}
+
+.meterCard.active,
+.purchaseMast,
+.purchaseCount,
+.readingControl:focus-within {
+  border-color: rgba(var(--accent-rgb), 0.62);
+}
+
+.readingControl:focus-within {
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+}
+
+.categoryTag {
+  background: rgba(var(--accent-rgb), 0.11);
+}
+
+.purchaseMast,
+.purchaseDialog {
+  background: radial-gradient(circle at 88% 4%, rgba(var(--accent-rgb), 0.22), transparent 38%), var(--surface-solid);
+}
+
+/* One theme-aware glass treatment for the app's content cards. */
+.homeGrid button,
+.meterCard,
+.entryPanel,
+.history article,
+.purchaseHistory .purchaseCard {
+  border-color: var(--glass-border);
+  color: var(--text);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 58%), var(--glass);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08), 0 12px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+}
+
+.homeGrid small,
+.homeGrid button > span:last-child,
+.meterCard span,
+.meterCard small,
+.history time,
+.purchaseMeta time {
+  color: var(--muted);
+}
+
+.limitStrip div {
+  background: linear-gradient(90deg, transparent 0 86%, var(--accent) 86% 91%, #f05a4f 91%), transparent;
+}
+
+:focus-visible {
+  outline-color: var(--accent);
+}
+
+@keyframes ambientDriftTop {
+  0%, 100% { opacity: 0.82; transform: translate3d(-5%, -4%, 0) scale(1.04) rotate(-2deg); }
+  32% { opacity: 1; transform: translate3d(5%, 2%, 0) scale(1.16) rotate(3deg); }
+  68% { opacity: 0.88; transform: translate3d(-1%, 7%, 0) scale(1.1) rotate(-1deg); }
+}
+
+@keyframes ambientDriftLow {
+  0%, 100% { opacity: 0.58; transform: translate3d(5%, 5%, 0) scale(1.06) rotate(2deg); }
+  40% { opacity: 0.78; transform: translate3d(-6%, -2%, 0) scale(1.15) rotate(-3deg); }
+  74% { opacity: 0.66; transform: translate3d(2%, -7%, 0) scale(1.1) rotate(1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+    will-change: auto;
   }
 }

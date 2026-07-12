@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mobile Accessibility"
+  short_description: "Build accessible mobile and iPad UI"
+  default_prompt: "Use $mobile-accessibility to make this interface mobile-first and accessible."
