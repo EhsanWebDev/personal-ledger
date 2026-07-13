@@ -1,11 +1,11 @@
 {
   "name": "Personal Ledger",
   "short_name": "Ledger",
-  "description": "A private hub for personal mini apps.",
+  "description": "Track weekday work sessions and breaks with server-accurate time.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f1ea",
-  "theme_color": "#17231f",
+  "theme_color": "#090d13",
   "icons": [
     {
       "src": "/icon.svg",

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Limelight } from "@getlimelight/sdk";
 import * as Dialog from "@radix-ui/react-dialog";
 import { supabase } from "./supabase";
+import { TimeTracker } from "./time-tracker";
 import "./styles.css";
 
 Limelight.connect();
@@ -17,10 +18,14 @@ const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "S
 const purchaseCategories = ["Mobile", "Laptop", "PC", "TWS earbuds", "Smartwatch", "Tablet", "Camera", "Gaming"];
 const currency = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
 const themes = [
-  { id: "ledger", name: "Ledger", note: "Moss & brass", colors: ["#101412", "#f0c448"] },
-  { id: "aurora", name: "Aurora", note: "Ink & orchid", colors: ["#0b1020", "#a78bfa"] },
-  { id: "tide", name: "Volt", note: "Carbon & chartreuse", colors: ["#0d110b", "#a2d729"] },
-  { id: "ember", name: "Mulberry", note: "Wine & blush", colors: ["#1b0d18", "#ff9fc7"] },
+  { id: "ledger", name: "Ledger", note: "Moss & brass", colors: ["oklch(0.159 0.012 154)", "oklch(0.766 0.143 88)"] },
+  { id: "ruby", name: "Ruby", note: "Coal & pomegranate", colors: ["oklch(0.145 0.018 25)", "oklch(0.72 0.165 25)"] },
+  { id: "tide", name: "Volt", note: "Carbon & chartreuse", colors: ["oklch(0.157 0.025 125)", "oklch(0.811 0.178 119)"] },
+  { id: "iris", name: "Iris", note: "Night & soft periwinkle", colors: ["oklch(0.145 0.025 275)", "oklch(0.78 0.105 285)"] },
+  { id: "slate", name: "Slate", note: "Blue-gray & ice", colors: ["oklch(0.15 0.012 245)", "oklch(0.8 0.075 235)"] },
+  { id: "sienna", name: "Sienna", note: "Espresso & apricot", colors: ["oklch(0.16 0.026 35)", "oklch(0.76 0.13 48)"] },
+  { id: "lagoon", name: "Lagoon", note: "Deep sea & aqua", colors: ["oklch(0.145 0.025 195)", "oklch(0.77 0.105 190)"] },
+  { id: "quartz", name: "Quartz", note: "Graphite & champagne", colors: ["oklch(0.15 0.008 85)", "oklch(0.82 0.055 85)"] },
 ];
 const formatRecentDate = (value, now = new Date()) => {
   const date = new Date(value);
@@ -38,14 +43,18 @@ const formatRecentDate = (value, now = new Date()) => {
 };
 
 function App() {
-  const [screen, setScreen] = useState("home");
-  const [theme, setTheme] = useState(() => localStorage.getItem("ledger-theme") || "ledger");
+  const [screen, setScreen] = useState("time");
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem("ledger-theme");
+    return themes.some(({ id }) => id === savedTheme) ? savedTheme : "ledger";
+  });
   const [readings, setReadings] = useState([]);
   const [activeMeter, setActiveMeter] = useState(defaultMeters[0]);
   const [form, setForm] = useState({ current_reading: "", previous_reading: "" });
   const [busy, setBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [readingDialogOpen, setReadingDialogOpen] = useState(false);
   const [purchases, setPurchases] = useState([]);
   const [purchaseForm, setPurchaseForm] = useState({ item_name: "", category: "", purchase_price: "", purchase_date: today() });
   const [editingPurchase, setEditingPurchase] = useState(null);
@@ -126,6 +135,7 @@ function App() {
     } else {
       setMessage("Reading saved.");
       setForm({ current_reading: current, previous_reading: previous });
+      setReadingDialogOpen(false);
       loadReadings();
     }
   }
@@ -260,14 +270,15 @@ function App() {
 
   const navigation = [
     { id: "home", label: "Home", icon: HomeIcon },
+    { id: "time", label: "Time", icon: TimeIcon },
     { id: "electricity", label: "Electricity", icon: BoltIcon },
     { id: "purchases", label: "Purchases", icon: BagIcon },
     { id: "more", label: "More", icon: MoreIcon },
   ];
 
   return (
-    <main className="appShell">
-      {screen === "home" ? <Home meters={meters} purchases={purchases} onNavigate={setScreen} /> : screen === "readings" ? <Readings readings={readings} busy={clearBusy} message={message} onBack={() => setScreen("electricity")} onClear={clearReadings} /> : screen === "purchases" ? <Purchases
+    <main className={`appShell${screen === "time" ? " timeMode" : ""}`}>
+      {screen === "home" ? <Home meters={meters} purchases={purchases} onNavigate={setScreen} /> : screen === "time" ? <TimeTracker /> : screen === "readings" ? <Readings readings={readings} busy={clearBusy} message={message} onBack={() => setScreen("electricity")} onClear={clearReadings} /> : screen === "purchases" ? <Purchases
         purchases={purchases}
         form={purchaseForm}
         query={purchaseQuery}
@@ -283,17 +294,17 @@ function App() {
         onCancelEdit={cancelPurchaseEdit}
         onDelete={deletePurchase}
       /> : screen === "more" ? <More theme={theme} onThemeChange={setTheme} /> : <>
-      <header className="mast">
-        <div>
-          <p className="eyebrow">Personal Ledger</p>
-          <h1>{activeUnits}<span> units</span></h1>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Electricity"
+        trailing={<span className="pageStat"><strong>{activeUnits}</strong> units</span>}
+      >
+        Power <em>usage.</em>
+      </PageHeader>
 
       <section className="limitStrip" aria-label="Consumption limits">
         <span>0</span>
         <div>
-          <i style={{ width: `${Math.min(100, (activeUnits / 220) * 100)}%` }} />
+          <i style={{ "--fill": Math.min(1, activeUnits / 220) }} />
           <b style={{ left: "86%" }}>190</b>
           <b style={{ left: "91%" }}>200</b>
         </div>
@@ -310,35 +321,26 @@ function App() {
           >
             <span>{meter.name}</span>
             <strong>{meter.latest ? meter.units : "--"}</strong>
-            <small>{meter.latest ? `${meter.latest.current_reading} now` : "No reading yet"}</small>
+            <small>{meter.name === activeMeter
+              ? meter.latest ? "Selected" : "Selected · no reading yet"
+              : meter.latest ? `${meter.latest.current_reading} now` : "No reading yet"}</small>
           </button>
         ))}
       </section>
 
-      <form className="entryPanel" onSubmit={saveReading}>
+      <section className="entryPanel">
         <div className="panelHead">
           <div>
-            <p className="eyebrow">Meter readings</p>
-            <h2>{activeMeter}</h2>
+            <p className="eyebrow">Latest reading</p>
+            <h2>Reading details</h2>
           </div>
         </div>
-        <div className="readingGrid">
-          <label>
-            Current
-            <span className="readingControl">
-              <button type="button" aria-label="Decrease current reading" onClick={() => stepReading("current_reading", -1)}>−</button>
-              <input className="meterInput" type="number" min="0" step="1" required value={form.current_reading} onChange={(event) => setForm({ ...form, current_reading: event.target.value })} />
-              <button type="button" aria-label="Increase current reading" onClick={() => stepReading("current_reading", 1)}>+</button>
-            </span>
-          </label>
-          <label>
-            Previous
-            <input className="previousInput" type="number" min="0" step="1" required value={form.previous_reading} onChange={(event) => setForm({ ...form, previous_reading: event.target.value })} />
-          </label>
+        <div className="readingSummary">
+          <p><span>Current</span><strong>{activeLatest?.current_reading ?? "--"}</strong></p>
+          <p><span>Previous</span><strong>{activeLatest?.previous_reading ?? "--"}</strong></p>
         </div>
-        <button type="submit" disabled={busy}>{busy ? "Saving..." : "Save reading"}</button>
-        {message && <p className="message">{message}</p>}
-      </form>
+        {message && <p className="message" aria-live="polite">{message}</p>}
+      </section>
 
       <section className="history" aria-label="Recent readings">
         <div className="historyHead">
@@ -347,6 +349,34 @@ function App() {
         </div>
         {readings.length ? readings.slice(0, 3).map((reading) => <ReadingRow key={reading.id} reading={reading} />) : <p className="emptyState">Your saved meter readings will appear here.</p>}
       </section>
+
+      <Dialog.Root open={readingDialogOpen} onOpenChange={setReadingDialogOpen}>
+        <Dialog.Trigger asChild><button className="purchaseFab" type="button" aria-label="Add meter reading" onClick={() => setMessage("")}><PlusIcon /></button></Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialogOverlay" />
+          <Dialog.Content className="purchaseDialog">
+            <div className="dialogHead"><div><p className="eyebrow">New meter reading</p><Dialog.Title>Add reading</Dialog.Title><Dialog.Description>{activeMeter}</Dialog.Description></div><Dialog.Close className="dialogClose" aria-label="Close"><CloseIcon /></Dialog.Close></div>
+            <form onSubmit={saveReading}>
+              <div className="readingGrid">
+                <label>
+                  Current
+                  <span className="readingControl">
+                    <button type="button" aria-label="Decrease current reading" onClick={() => stepReading("current_reading", -1)}>−</button>
+                    <input className="meterInput" type="number" min="0" step="1" required autoFocus value={form.current_reading} onChange={(event) => setForm({ ...form, current_reading: event.target.value })} />
+                    <button type="button" aria-label="Increase current reading" onClick={() => stepReading("current_reading", 1)}>+</button>
+                  </span>
+                </label>
+                <label>
+                  Previous
+                  <input className="previousInput" type="number" min="0" step="1" required value={form.previous_reading} onChange={(event) => setForm({ ...form, previous_reading: event.target.value })} />
+                </label>
+              </div>
+              <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? "Saving..." : "Save reading"}</button><Dialog.Close asChild><button className="secondaryButton" type="button" disabled={busy}>Cancel</button></Dialog.Close></div>
+              {message && <p className="message" aria-live="polite">{message}</p>}
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
       </>}
       <nav className="bottomNav" aria-label="Primary navigation">
         {navigation.map(({ id, label, icon: Icon }) => (
@@ -374,13 +404,29 @@ function ReadingRow({ reading }) {
   </article>;
 }
 
+function PageHeader({ eyebrow, children, note, leading, trailing }) {
+  return <header className={`pageMast${leading ? " hasLeading" : ""}`}>
+    {leading}
+    <div className="pageMastCopy">
+      <p className="eyebrow">{eyebrow}</p>
+      <div className="pageMastTitleRow">
+        <h1>{children}</h1>
+        {trailing ? <div className="pageMastTrailing">{trailing}</div> : null}
+      </div>
+      {note ? <p className="pageMastNote">{note}</p> : null}
+    </div>
+  </header>;
+}
+
 function Readings({ readings, busy, message, onBack, onClear }) {
   return <>
-    <header className="listMast">
-      <button className="backButton" type="button" onClick={onBack} aria-label="Back to meters">←</button>
-      <div><p className="eyebrow">Meter ledger</p><h1>All readings</h1></div>
-      <span>{readings.length}</span>
-    </header>
+    <PageHeader
+      eyebrow="Meter ledger"
+      leading={<button className="pageIconButton" type="button" onClick={onBack} aria-label="Back to meters">←</button>}
+      trailing={<span className="pageCount">{readings.length}</span>}
+    >
+      All <em>readings.</em>
+    </PageHeader>
     <section className="history allReadings" aria-label="All meter readings">
       <div className="allReadingsHead">
         <h2>History</h2>
@@ -400,6 +446,10 @@ function BoltIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m13.5 2-8 12h6l-1 8 8-12h-6Z" /></svg>;
 }
 
+function TimeIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2M9 3h6" /></svg>;
+}
+
 function BagIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 8h14l1 12H4Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg>;
 }
@@ -411,10 +461,11 @@ function MoreIcon() {
 function Home({ meters, purchases, onNavigate }) {
   const totalUnits = meters.reduce((sum, meter) => sum + meter.units, 0);
   return <>
-    <header className="mast homeMast">
-      <div><p className="eyebrow">Personal ledger</p><h1>Everything,<br /><span>accounted for.</span></h1></div>
-    </header>
+    <PageHeader eyebrow="Personal ledger">Everything, <em>accounted for.</em></PageHeader>
     <section className="homeGrid" aria-label="Ledger overview">
+      <button className="timeOverview" type="button" onClick={() => onNavigate("time")}>
+        <span className="overviewIcon"><TimeIcon /></span><small>Workday</small><strong>8:00</strong><span>weekday time target</span>
+      </button>
       <button type="button" onClick={() => onNavigate("electricity")}>
         <span className="overviewIcon"><BoltIcon /></span><small>Electricity</small><strong>{totalUnits}</strong><span>units across {meters.length} meters</span>
       </button>
@@ -427,12 +478,13 @@ function Home({ meters, purchases, onNavigate }) {
 
 function More({ theme, onThemeChange }) {
   return <section className="morePanel">
-    <div className="moreIntro"><span className="overviewIcon"><MoreIcon /></span><div><p className="eyebrow">Appearance</p><h1>Set the mood.</h1><p>Choose a finish for your personal ledger.</p></div></div>
+    <PageHeader eyebrow="Appearance" note="Choose a finish for your personal ledger.">Set the <em>mood.</em></PageHeader>
+    <div className="themeHeading"><div><p className="eyebrow">Theme library</p><h2>Pick your atmosphere</h2></div><span>{themes.length} finishes</span></div>
     <div className="themeGrid" role="radiogroup" aria-label="App theme">
-      {themes.map((item) => <button className={`themeCard${theme === item.id ? " active" : ""}`} type="button" role="radio" aria-checked={theme === item.id} key={item.id} onClick={() => onThemeChange(item.id)}>
+      {themes.map((item) => <button className={`themeCard${theme === item.id ? " active" : ""}`} type="button" role="radio" aria-checked={theme === item.id} aria-label={`${item.name}: ${item.note}`} key={item.id} onClick={() => onThemeChange(item.id)}>
         <span className="themePreview" style={{ "--swatch-bg": item.colors[0], "--swatch-accent": item.colors[1] }}><i /><i /><i /></span>
         <span><strong>{item.name}</strong><small>{item.note}</small></span>
-        <i className="themeCheck" aria-hidden="true">✓</i>
+        <span className="themeState" aria-hidden="true"><i className="themeDot" /><i className="themeCheck">✓</i></span>
       </button>)}
     </div>
   </section>;
@@ -467,14 +519,13 @@ function Purchases({ purchases, form, query, busy, message, editingPurchase, dia
     onCancelEdit();
   };
   return <>
-    <header className="mast purchaseMast">
-      <div>
-        <p className="eyebrow">Purchase ledger</p>
-        <h1>{currency.format(total)}</h1>
-        <p className="mastNote">{purchases.length ? `${purchases.length} item${purchases.length === 1 ? "" : "s"} on record` : "Your considered collection starts here"}</p>
-      </div>
-      <span className="purchaseCount">{purchases.length}</span>
-    </header>
+    <PageHeader
+      eyebrow="Purchase ledger"
+      note={purchases.length ? `${currency.format(total)} across your collection` : "Your considered collection starts here"}
+      trailing={<span className="pageCount">{purchases.length}</span>}
+    >
+      Your <em>purchases.</em>
+    </PageHeader>
 
     <section className="history purchaseHistory" aria-label="Purchase history">
       <div className="collectionHead"><div><p className="eyebrow">Inventory</p><h2>Collection</h2></div><label className="search"><span className="srOnly">Search purchases</span><input type="search" placeholder="Find an item" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
