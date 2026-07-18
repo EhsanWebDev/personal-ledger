@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
+import { NumberTicker } from "@/components/motion/number-ticker";
+import { Loader } from "@/components/motion/loader";
 import { supabase } from "./supabase";
 import { formatDuration, projectTimerSnapshot } from "./time";
 import "./time-tracker.css";
@@ -6,10 +10,10 @@ import "./time-tracker.css";
 const USER_KEY = "personal-ledger-time-user";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = {
-  clockIn: ["time_tracker_clock_in", "Clock In"],
-  break: ["time_tracker_start_break", "Start Break"],
-  resume: ["time_tracker_resume", "Resume"],
-  clockOut: ["time_tracker_clock_out", "Clock Out"],
+  clockIn: ["time_tracker_clock_in", "Clock In", "Starting time tracking…", "Time tracking started", "Your work session is now running."],
+  break: ["time_tracker_start_break", "Start Break", "Starting your break…", "Break started", "Work time is paused until you resume."],
+  resume: ["time_tracker_resume", "Resume", "Resuming time tracking…", "Time tracking resumed", "Your work session is running again."],
+  clockOut: ["time_tracker_clock_out", "Clock Out", "Clocking out…", "Clocked out", "Today’s work session has been closed."],
 };
 
 function getUserId() {
@@ -29,6 +33,18 @@ function formatTime(value) {
   return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+const formatClock = (value) => formatTime(value);
+const formatFullDuration = (value) => formatDuration(value);
+const formatShortDuration = (value) => formatDuration(value, false);
+
+function DurationNumber({ value, short = false }) {
+  return <NumberTicker value={value} duration={0.55} format={short ? formatShortDuration : formatFullDuration} />;
+}
+
+function ClockNumber({ value }) {
+  return value ? <NumberTicker value={new Date(value).getTime()} duration={0.55} format={formatClock} /> : "—";
+}
+
 function formatDate(value) {
   if (!value) return "—";
   return new Date(`${value}T00:00:00`).toLocaleDateString([], {
@@ -42,7 +58,7 @@ function statusLabel(status) {
   return { idle: "Ready", clocked_in: "Working", on_break: "On break", clocked_out: "Finished" }[status] ?? "Ready";
 }
 
-export function TimeTracker() {
+export function TimeTracker({ showToast, updateToast }) {
   const userId = useMemo(getUserId, []);
   const timezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
   const [snapshot, setSnapshot] = useState(null);
@@ -123,7 +139,8 @@ export function TimeTracker() {
   );
 
   async function runAction(action) {
-    const [rpc, label] = ACTIONS[action];
+    const [rpc, label, pendingTitle, successTitle, successDescription] = ACTIONS[action];
+    const toastId = showToast({ title: pendingTitle, description: "Syncing with server time", status: "loading", duration: 0, dismissible: false });
     setBusy(action);
     setMessage("");
     try {
@@ -132,8 +149,11 @@ export function TimeTracker() {
       if (error) throw error;
       await sync();
       setMessage(`${label} recorded.`);
+      updateToast(toastId, { title: successTitle, description: successDescription, status: "success", duration: 4200, dismissible: true });
     } catch (error) {
-      setMessage(error.message || `${label} could not be recorded.`);
+      const description = error.message || `${label} could not be recorded.`;
+      setMessage(description);
+      updateToast(toastId, { title: `${label} failed`, description, status: "error", duration: 5200, dismissible: true });
       await sync();
     } finally {
       setBusy("");
@@ -141,7 +161,7 @@ export function TimeTracker() {
   }
 
   if (loading && !display) {
-    return <section className="timeTracker timeLoading" aria-busy="true"><span /><p>Syncing your workday…</p></section>;
+    return <section className="timeTracker timeLoading" aria-busy="true"><Loader variant="scramble" size={48} speed={1.2} label="Syncing your workday" /><p>Syncing your workday…</p></section>;
   }
 
   if (!display) {
@@ -153,10 +173,6 @@ export function TimeTracker() {
   const status = active?.status ?? today.status;
   const progress = Math.min(100, (today.worked_seconds / today.target_seconds) * 100);
   const canChange = online && !busy;
-  const targetText = today.overtime_seconds > 0
-    ? `${formatDuration(today.overtime_seconds, false)} overtime`
-    : `${formatDuration(today.remaining_seconds, false)} remaining`;
-
   if (showHistory) {
     return <section className="timeTracker">
       <header className="timeMast historyMast">
@@ -165,7 +181,7 @@ export function TimeTracker() {
           <p className="timeEyebrow">Previous workdays</p>
           <h1>Work <em>history.</em></h1>
         </div>
-        <span>{display.history.length} days</span>
+        <span><NumberTicker value={display.history.length} duration={0.55} /> days</span>
       </header>
       <TimeHistory days={display.history} />
     </section>;
@@ -183,6 +199,25 @@ export function TimeTracker() {
       </div>
     </header>
 
+    {active ? <div className="flex justify-center">
+      <DynamicIsland view={active.status}>
+        <DynamicIslandView id="clocked_in" className="gap-3 px-5 py-3">
+          <span className="grid size-9 place-items-center rounded-full bg-background/10"><ClockIcon /></span>
+          <span className="flex min-w-32 flex-col">
+            <small className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-60">Working</small>
+            <strong className="text-lg font-bold leading-tight tabular-nums"><DurationNumber value={today.worked_seconds} /></strong>
+          </span>
+        </DynamicIslandView>
+        <DynamicIslandView id="on_break" className="gap-3 px-5 py-3">
+          <span className="grid size-9 place-items-center rounded-full bg-warning text-background"><PauseIcon /></span>
+          <span className="flex min-w-32 flex-col">
+            <small className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-60">On break</small>
+            <strong className="text-lg font-bold leading-tight tabular-nums"><DurationNumber value={today.worked_seconds} /></strong>
+          </span>
+        </DynamicIslandView>
+      </DynamicIsland>
+    </div> : null}
+
     {!display.is_weekday && !active && <aside className="weekendNotice" role="status">
       <CalendarIcon />
       <div><strong>Weekend mode</strong><span>Clock in opens again on Monday. Your history is still available.</span></div>
@@ -190,42 +225,54 @@ export function TimeTracker() {
 
     <div className="timeLayout">
       <div className="timerShell bezel">
-        <article className="timerCore">
-          <div className="workDial" style={{ "--work-progress": `${progress * 3.6}deg` }}>
-            <div>
-              <span>{active ? "Worked today" : today.worked_seconds ? "Day total" : "Today’s target"}</span>
-              <strong>{formatDuration(today.worked_seconds)}</strong>
-              <small>{targetText}</small>
+        <article className="ledgerCard timerCore">
+          <div className="timerOverview">
+            <div className="timerCopy">
+              <span className="timerLabel">{active ? "Worked today" : today.worked_seconds ? "Day total" : "Today’s target"}</span>
+              <strong className="timerValue"><DurationNumber value={today.worked_seconds} /></strong>
+              <p className={today.overtime_seconds > 0 ? "timerRemaining overtime" : "timerRemaining"}>
+                <b><DurationNumber value={today.overtime_seconds || today.remaining_seconds} short /></b>
+                <span>{today.overtime_seconds > 0 ? "overtime" : "remaining to target"}</span>
+              </p>
             </div>
+            <WorkProgress progress={progress} />
           </div>
 
-          <div className="timeActions" aria-label="Work session actions">
-            {!active && <ActionButton tone="primary" label="Clock In" icon={<PlayIcon />} disabled={!canChange || !display.is_weekday} busy={busy === "clockIn"} onClick={() => runAction("clockIn")} />}
-            {active?.status === "clocked_in" && <ActionButton tone="break" label="Start Break" icon={<PauseIcon />} disabled={!canChange} busy={busy === "break"} onClick={() => runAction("break")} />}
-            {active?.status === "on_break" && <ActionButton tone="primary" label="Resume" icon={<PlayIcon />} disabled={!canChange} busy={busy === "resume"} onClick={() => runAction("resume")} />}
-            {active && <ActionButton tone="quiet" label="Clock Out" icon={<StopIcon />} disabled={!canChange} busy={busy === "clockOut"} onClick={() => runAction("clockOut")} />}
+          <div className="timerFooter">
+            <div className="timeActions" aria-label="Work session actions">
+              {!active && <ActionButton tone="primary" label="Clock In" icon={<PlayIcon />} disabled={!canChange || !display.is_weekday} busy={busy === "clockIn"} onClick={() => runAction("clockIn")} />}
+              {active?.status === "clocked_in" && <ActionButton tone="break" label="Start Break" icon={<PauseIcon />} disabled={!canChange} busy={busy === "break"} onClick={() => runAction("break")} />}
+              {active?.status === "on_break" && <ActionButton tone="primary" label="Resume" icon={<PlayIcon />} disabled={!canChange} busy={busy === "resume"} onClick={() => runAction("resume")} />}
+              {active && <ActionButton tone="quiet" label="Clock Out" icon={<StopIcon />} disabled={!canChange} busy={busy === "clockOut"} onClick={() => runAction("clockOut")} />}
+            </div>
+            {message || !online ? <p className="timeMessage" aria-live="polite">{message || "Offline"}</p> : null}
           </div>
-          <p className="timeMessage" aria-live="polite">{message || (online ? "Synced with server time" : "Offline")}</p>
         </article>
       </div>
 
       <div className="timeSide">
-        <div className="metricGrid">
-          <Metric label="Clocked in" value={formatTime(active?.clocked_in_at ?? today.clocked_in_at)} note={active ? "Current session" : "First session"} />
-          <Metric label="Current session" value={formatDuration(active?.worked_seconds ?? 0, false)} note="Breaks excluded" />
-          <Metric label="Total breaks" value={formatDuration(today.break_seconds, false)} note={active?.status === "on_break" ? `Current · ${formatDuration(active.current_break_seconds)}` : "Across today"} accent={active?.status === "on_break"} />
-          <Metric label={today.overtime_seconds ? "Overtime" : "Remaining"} value={formatDuration(today.overtime_seconds || today.remaining_seconds, false)} note="8 hour target" complete={today.target_met} />
+        <div className="detailsShell bezel">
+          <dl className="ledgerCard timeDetails" aria-label="Today’s session details">
+            <div>
+              <dt>Clocked in</dt>
+              <dd><ClockNumber value={active?.clocked_in_at ?? today.clocked_in_at} /></dd>
+            </div>
+            <div className={active?.status === "on_break" ? "isBreak" : undefined}>
+              <dt>{active?.status === "on_break" ? "On break" : "Breaks today"}</dt>
+              <dd><DurationNumber value={active?.status === "on_break" ? active.current_break_seconds : today.break_seconds} short /></dd>
+            </div>
+          </dl>
         </div>
 
         {!active && today.worked_seconds > 0 && <div className="summaryShell bezel">
-          <article className="summaryCore">
+          <article className="ledgerCard summaryCore">
             <div><p className="timeEyebrow">Today’s summary</p><h2>{today.target_met ? "Target complete" : "Session closed"}</h2></div>
-            <span className={today.target_met ? "targetMark complete" : "targetMark"}>{today.target_met ? "✓" : formatDuration(today.remaining_seconds, false)}</span>
+            <span className={today.target_met ? "targetMark complete" : "targetMark"}>{today.target_met ? "✓" : <DurationNumber value={today.remaining_seconds} short />}</span>
             <dl>
-              <div><dt>Clock in</dt><dd>{formatTime(today.clocked_in_at)}</dd></div>
-              <div><dt>Clock out</dt><dd>{formatTime(today.clocked_out_at)}</dd></div>
-              <div><dt>Worked</dt><dd>{formatDuration(today.worked_seconds, false)}</dd></div>
-              <div><dt>Breaks</dt><dd>{formatDuration(today.break_seconds, false)}</dd></div>
+              <div><dt>Clock in</dt><dd><ClockNumber value={today.clocked_in_at} /></dd></div>
+              <div><dt>Clock out</dt><dd><ClockNumber value={today.clocked_out_at} /></dd></div>
+              <div><dt>Worked</dt><dd><DurationNumber value={today.worked_seconds} short /></dd></div>
+              <div><dt>Breaks</dt><dd><DurationNumber value={today.break_seconds} short /></dd></div>
             </dl>
           </article>
         </div>}
@@ -237,10 +284,10 @@ export function TimeTracker() {
 
 function TimeHistory({ days }) {
   return <div className="historyShell bezel">
-    <section className="timeHistory" aria-label="Work history">
+    <section className="ledgerCard timeHistory" aria-label="Work history">
       {days.length ? <div className="historyTable">
         <div className="historyLabels" aria-hidden="true"><span>Date</span><span>In / out</span><span>Worked</span><span>Breaks</span><span>Target</span></div>
-        {days.map((day) => <article key={day.work_date}>
+        {days.map((day) => <article className="ledgerCard" key={day.work_date}>
           <strong>{formatDate(day.work_date)}</strong>
           <span data-label="In / out">{formatTime(day.clocked_in_at)} <i>→</i> {formatTime(day.clocked_out_at)}</span>
           <span data-label="Worked">{formatDuration(day.worked_seconds, false)}</span>
@@ -252,16 +299,32 @@ function TimeHistory({ days }) {
   </div>;
 }
 
-function Metric({ label, value, note, accent = false, complete = false }) {
-  return <div className={`metricShell bezel${accent ? " isBreak" : ""}${complete ? " isComplete" : ""}`}>
-    <article className="metricCore"><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
-  </div>;
-}
-
 function ActionButton({ label, icon, tone, busy, ...props }) {
   return <button className={`timeAction ${tone}`} type="button" {...props}>
-    <span>{busy ? "Recording…" : label}</span><i>{icon}</i>
+    <span>{busy ? "Recording…" : label}</span><i>{busy ? <Loader variant="dots" size={16} label={`Recording ${label}`} /> : icon}</i>
   </button>;
+}
+
+function WorkProgress({ progress }) {
+  const reduceMotion = useReducedMotion();
+  const value = Math.max(0, Math.min(100, progress));
+
+  return <div className="workProgress" role="progressbar" aria-label="Today’s work target" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(value)}>
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <circle className="workProgressTrack" cx="60" cy="60" r="51" pathLength="1" />
+      <motion.circle
+        className="workProgressValue"
+        cx="60"
+        cy="60"
+        r="51"
+        pathLength="1"
+        initial={false}
+        animate={{ pathLength: value / 100 }}
+        transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.8, bounce: 0 }}
+      />
+    </svg>
+    <span><strong>{Math.round(value)}%</strong><small>complete</small></span>
+  </div>;
 }
 
 function CalendarIcon() {
@@ -278,6 +341,10 @@ function BackIcon() {
 
 function PlayIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5Z" /></svg>;
+}
+
+function ClockIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 1.5" /></svg>;
 }
 
 function PauseIcon() {

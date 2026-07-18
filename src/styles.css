@@ -1,3 +1,9 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -23,6 +29,45 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface-solid);
+  --card-foreground: var(--text);
+  --popover: var(--surface-solid);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+  --secondary: var(--surface-solid);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --accent-foreground: var(--accent-ink);
+  --destructive: oklch(0.62 0.22 25);
+  --border: var(--glass-border);
+  --border-strong: color-mix(in oklch, var(--glass-border), var(--text) 12%);
+  --input: var(--glass-border);
+  --ring: var(--accent);
+  --neon: oklch(0.8 0.22 145);
+  --violet: oklch(0.68 0.22 295);
+  --success: oklch(0.7 0.18 155);
+  --warning: oklch(0.78 0.18 75);
+  --glass-bg: var(--glass);
+  --glass-strong-bg: color-mix(in oklch, var(--surface-solid), transparent 18%);
+  --glass-thin-bg: color-mix(in oklch, var(--bg), transparent 45%);
+  --card-surface: color-mix(in oklch, var(--bg) 68%, transparent);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 :root[data-theme="ruby"] {
@@ -76,6 +121,20 @@ body::before {
   transform: translate3d(-3%, -2%, 0) scale(1.05);
   animation: ambientGlow 18s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
   pointer-events: none;
+}
+
+.shaderBackdrop {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.shaderCanvas {
+  position: absolute;
+  inset: 0;
 }
 
 button,
@@ -170,6 +229,102 @@ button {
   stroke-width: 1.55;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.appNavigation {
+  position: fixed;
+  z-index: 30;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: 50%;
+  display: grid;
+  place-items: end center;
+  transform: translateX(-50%);
+}
+
+.appNavigationDock {
+  color: var(--text);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 58%), var(--glass-strong-bg);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.34), inset 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+.appNavigationDock button {
+  transition: color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.appNavigationDock button:active {
+  transform: scale(0.96);
+}
+
+.appNavigationDock button[aria-current="page"] {
+  color: var(--accent);
+}
+
+.appNavigationDock button[aria-current="page"] > span:first-child {
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+.appNavIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  stroke-width: 1.7;
+}
+
+.miniAppEmpty {
+  display: grid;
+  min-height: 300px;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  padding: 28px;
+  color: var(--muted);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 58%), var(--glass);
+  text-align: center;
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+}
+
+.miniAppEmpty > span {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 18px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.11);
+}
+
+.miniAppEmpty svg {
+  width: 24px;
+  height: 24px;
+}
+
+.miniAppEmpty p {
+  max-width: 28ch;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1024px) {
+  .appNavigation {
+    width: min(calc(100vw - 32px), 420px);
+  }
+
+  .appNavigationDock {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 600px) {
+  .appNavigation {
+    width: min(calc(100vw - 32px), 320px);
+  }
 }
 
 .overviewIcon svg {
@@ -403,6 +558,70 @@ button {
   gap: 12px;
 }
 
+.backgroundGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.backgroundCard {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  min-height: 146px;
+  padding: 7px 7px 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 20px;
+  color: var(--text);
+  background: oklch(1 0 0 / 0.045);
+  text-align: left;
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.09), 0 10px 30px oklch(0 0 0 / 0.1), inset 0 1px oklch(1 0 0 / 0.08);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  transition-property: transform, background-color, box-shadow;
+  transition-duration: 240ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.backgroundCard:active { transform: scale(0.96); }
+.backgroundCard.active { background: rgba(var(--accent-rgb), 0.09); box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.68), 0 10px 32px rgba(var(--accent-rgb), 0.12), inset 0 1px oklch(1 0 0 / 0.12); }
+.backgroundCard > span:nth-child(2) { display: grid; gap: 2px; padding: 0 30px 0 6px; }
+.backgroundCard strong { font-size: 13px; }
+.backgroundCard small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.backgroundCard .themeState { right: 11px; bottom: 12px; }
+.backgroundCard.active .themeDot { opacity: 0; filter: blur(4px); scale: 0.25; }
+.backgroundCard.active .themeCheck { opacity: 1; filter: blur(0); scale: 1; }
+
+.backgroundPreview {
+  position: relative;
+  height: 74px;
+  overflow: hidden;
+  border-radius: 13px;
+  background: var(--bg);
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+.backgroundPreview::before,
+.backgroundPreview::after,
+.backgroundPreview i {
+  position: absolute;
+  content: "";
+}
+
+.backgroundCard.mesh .backgroundPreview::before { inset: -20%; background: radial-gradient(circle at 28% 35%, var(--accent), transparent 34%), radial-gradient(circle at 75% 68%, var(--glow-b), transparent 38%); filter: blur(4px); }
+.backgroundCard.mesh .backgroundPreview::after { inset: 0; background: radial-gradient(circle at 50% 50%, transparent, var(--bg) 85%); }
+.backgroundCard.dusk .backgroundPreview::before { inset: -20%; background: radial-gradient(circle at 22% 25%, #f6a1c8, transparent 28%), radial-gradient(circle at 78% 40%, #7597de, transparent 35%), radial-gradient(circle at 50% 88%, #2b1055, #0d0221 70%); filter: blur(3px); }
+.backgroundCard.dusk .backgroundPreview::after { inset: 0; background: linear-gradient(135deg, transparent 30%, #0d0221 100%); opacity: 0.38; }
+.backgroundCard.water .backgroundPreview { background: #909090; }
+.backgroundCard.water .backgroundPreview::before { inset: -35%; background: repeating-radial-gradient(ellipse at 50% 115%, #fff 0 1.5%, #bdbdbd 3% 7%, #777 9% 13%); transform: rotate(-7deg) scale(1.2); filter: blur(1.5px); opacity: 0.82; }
+.backgroundCard.water .backgroundPreview::after { inset: 0; background: linear-gradient(135deg, #fff6, transparent 42%, #40404080); }
+.backgroundCard.neuro .backgroundPreview::before { inset: -30%; background: repeating-conic-gradient(from 40deg, var(--accent) 0 5deg, var(--bg) 12deg 24deg); filter: blur(6px); opacity: 0.72; }
+.backgroundCard.neuro .backgroundPreview::after { inset: 0; background: radial-gradient(circle, transparent 18%, var(--bg) 88%); }
+
 .themeHeading {
   display: flex;
   align-items: end;
@@ -489,13 +708,13 @@ button {
 
 /* Theme layer keeps the existing ledger components coherent without duplicating them. */
 body { color: var(--text); background: var(--bg); transition: background-color 700ms ease, color 700ms ease; }
-h1, .homeGrid strong, .meterCard strong, .purchaseCardHead strong, .dialogHead h2 { color: var(--heading); }
-.eyebrow, .textButton, .readingControl button { color: var(--accent); }
+h1, .homeGrid strong, .meterCard strong, .purchaseCardHead strong, .ledgerBottomSheet h2 { color: var(--heading); }
+.eyebrow, .textButton { color: var(--accent); }
 .overviewIcon { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
 .bottomNav button.active { color: var(--heading); }
 .bottomNav button.active .navIcon, button[type="submit"], .purchaseFab, .categoryFilters button.active { color: var(--accent-ink); background: var(--accent); box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.24), inset 0 1px rgba(255,255,255,.4); }
 .bottomNav, .homeGrid button, .entryPanel, .authPanel, .meterCard, .history article, .purchaseHistory .purchaseCard { background-color: var(--surface); }
-.purchaseMast, .purchaseDialog { background-color: var(--surface-solid); }
+.purchaseMast, .ledgerBottomSheet { background-color: var(--surface-solid); }
 :focus-visible { outline-color: var(--accent); }
 
 @keyframes ambientGlow {
@@ -667,14 +886,20 @@ label {
   font-weight: 700;
 }
 
-input {
+select {
   width: 100%;
-  min-height: 48px;
-  border: 1px solid rgba(238, 245, 234, 0.14);
-  border-radius: 8px;
-  padding: 0 12px;
-  color: #eef5ea;
-  background: #101412;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding-inline: 12px;
+  color: var(--text);
+  background: var(--background);
+  font: inherit;
+  color-scheme: dark;
+}
+
+select:invalid {
+  color: var(--muted);
 }
 
 input[type="number"] {
@@ -685,12 +910,6 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   appearance: none;
   margin: 0;
-}
-
-.readingGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
 }
 
 .readingSummary {
@@ -720,64 +939,88 @@ input[type="number"]::-webkit-outer-spin-button {
   gap: 12px;
 }
 
-.meterInput {
-  min-width: 0;
-  min-height: 58px;
-  border: 0;
-  border-right: 1px solid rgba(238, 245, 234, 0.12);
-  border-left: 1px solid rgba(238, 245, 234, 0.12);
-  border-radius: 0;
-  padding: 0 4px;
-  font-size: 20px;
-  font-weight: 800;
-  text-align: center;
-}
-
-.previousInput {
-  min-height: 60px;
-  border-radius: 10px;
-  font-size: 20px;
-  font-weight: 800;
-  text-align: center;
-}
-
-.readingControl {
+.unitSliderField {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
-  overflow: hidden;
-  border: 1px solid rgba(238, 245, 234, 0.18);
-  border-radius: 10px;
-  background: #101412;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  gap: 10px;
+  padding: 4px 0 12px;
 }
 
-.readingControl:focus-within {
-  border-color: #f0c448;
-  box-shadow: 0 0 0 3px rgba(240, 196, 72, 0.16);
+.readingValueFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.readingControl button {
-  min-height: 58px;
-  border: 0;
-  padding: 0;
-  color: #f0c448;
-  background: #202b25;
-  font-size: 24px;
+.readingValueFields label,
+.previousReading {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 13px;
   font-weight: 700;
 }
 
-.readingControl button:hover {
-  background: #2a382f;
+.currentReadingInputField {
+  width: 100%;
+  height: 52px;
+  border-radius: 10px;
 }
 
-.readingControl button:active {
-  background: #34463a;
+.currentReadingInput {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
 }
 
-.readingControl > :focus-visible {
-  position: relative;
-  z-index: 1;
-  outline-offset: -3px;
+.previousReading output {
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  color: var(--muted);
+  background: var(--glass-thin-bg);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.unitSliderValue {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.unitSliderValue strong {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: color 180ms var(--ease-out);
+}
+
+.unitSliderValue[data-band="calm"] strong {
+  color: var(--success);
+}
+
+.unitSliderValue[data-band="edge"] strong {
+  color: var(--warning);
+}
+
+.unitSliderValue[data-band="danger"] strong {
+  color: var(--destructive);
+}
+
+.unitSliderLimits {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 button[type="submit"] {
@@ -808,7 +1051,7 @@ button[type="submit"] {
   position: fixed;
   z-index: 9;
   right: max(24px, calc((100vw - 512px) / 2));
-  bottom: calc(116px + env(safe-area-inset-bottom));
+  bottom: calc(82px + env(safe-area-inset-bottom));
   display: grid;
   width: 58px;
   min-height: 58px;
@@ -833,8 +1076,7 @@ button[type="submit"] {
   transform: scale(0.97);
 }
 
-.purchaseFab svg,
-.dialogClose svg {
+.purchaseFab svg {
   width: 21px;
   height: 21px;
   fill: none;
@@ -848,107 +1090,39 @@ button[type="submit"] {
   height: 25px;
 }
 
-.dialogOverlay {
-  position: fixed;
-  z-index: 20;
-  inset: 0;
-  background: rgba(6, 9, 7, 0.74);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  animation: veilIn 280ms var(--ease-out);
+.ledgerBottomSheet {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  color: var(--text);
+  background: radial-gradient(circle at 88% 4%, rgba(var(--accent-rgb), 0.18), transparent 38%), var(--surface-solid);
+  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.purchaseDialog {
-  position: fixed;
-  z-index: 21;
-  top: 50%;
-  left: 50%;
-  width: min(calc(100vw - 32px), 520px);
-  max-height: min(760px, calc(100dvh - 32px));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scroll-padding-block: 20px 110px;
-  transform: translate(-50%, -50%);
-  padding: 24px;
-  border: 1px solid rgba(240, 196, 72, 0.22);
-  border-radius: 28px;
-  color: #eef5ea;
-  background: radial-gradient(circle at 90% 0%, rgba(240, 196, 72, 0.14), transparent 34%), #18211d;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), inset 0 1px rgba(255, 255, 255, 0.08);
-  animation: dialogIn 420ms var(--ease-out);
+.ledgerBottomSheet > div:last-child {
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
 }
 
-.dialogHead {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 22px;
-}
-
-.dialogHead h2 {
-  color: #fff8d6;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.dialogHead p:last-child {
-  margin-top: 9px;
-  color: #8fa095;
-  font-size: 13px;
-}
-
-.dialogClose {
-  display: grid;
-  flex: 0 0 auto;
-  width: 42px;
-  min-height: 42px;
-  place-items: center;
-  border: 1px solid rgba(238, 245, 234, 0.14);
-  border-radius: 50%;
-  color: #c5d0c8;
-  background: rgba(16, 20, 18, 0.72);
-}
-
-.purchaseActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.purchaseActions .iconButton {
-  display: grid;
-  width: 38px;
-  min-height: 38px;
-  place-items: center;
-  border: 1px solid rgba(238, 245, 234, 0.16);
-  border-radius: 8px;
-  color: #fff8d6;
-  background: rgba(36, 49, 40, 0.72);
-}
-
-.purchaseActions .iconButton:hover {
-  border-color: rgba(240, 196, 72, 0.45);
-  background: #2c3a30;
-}
-
-.purchaseActions svg {
+.purchaseSwipeAction svg {
   width: 18px;
   height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
-.purchaseActions .deleteButton {
-  color: #ffc2ba;
+.purchaseSwipeItem,
+.purchaseSwipeRail,
+.purchaseSwipeSurface {
+  border-radius: 18px;
 }
 
-.purchaseActions .deleteButton:hover {
-  border-color: rgba(240, 90, 79, 0.6);
-  background: #3a1918;
+.purchaseSwipeItem,
+.purchaseSwipeRail {
+  background: color-mix(in oklch, var(--surface-solid), var(--accent) 7%);
+}
+
+.purchaseSwipeSurface {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 button:disabled {
@@ -1058,9 +1232,11 @@ button:disabled {
   width: min(190px, 48vw);
 }
 
+.searchInputField {
+  height: 38px;
+}
+
 .search input {
-  min-height: 38px;
-  padding-inline: 11px;
   font-size: 13px;
 }
 
@@ -1116,7 +1292,7 @@ button:disabled {
 
 .purchaseHistory .purchaseCard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 13px 16px;
   padding: 16px;
   border: 1px solid rgba(238, 245, 234, 0.1);
@@ -1238,41 +1414,8 @@ button:disabled {
   }
 }
 
-@keyframes veilIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes dialogFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes dialogIn {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)) scale(0.96); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-@keyframes dialogInTop {
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 @media (max-width: 640px) {
-  .purchaseDialog {
-    top: max(12px, env(safe-area-inset-top));
-    right: 16px;
-    left: 16px;
-    width: auto;
-    max-height: calc(100vh - 24px - env(safe-area-inset-top));
-    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
-    transform: none;
-    padding: 20px;
-    border-radius: 24px;
-    animation-name: dialogInTop;
-  }
-
-  .purchaseDialog input {
+  .ledgerBottomSheet input {
     font-size: 16px;
   }
 
@@ -1316,13 +1459,12 @@ h1 span,
 .history strong,
 .purchaseCardHead b,
 .purchaseCardHead strong,
-.dialogHead h2 {
+.ledgerBottomSheet h2 {
   color: var(--heading);
 }
 
 .eyebrow,
 .textButton,
-.readingControl button,
 .purchaseCount,
 .categoryTag,
 .bottomNav button.active {
@@ -1345,13 +1487,8 @@ button[type="submit"],
 
 .meterCard.active,
 .purchaseMast,
-.purchaseCount,
-.readingControl:focus-within {
+.purchaseCount {
   border-color: rgba(var(--accent-rgb), 0.62);
-}
-
-.readingControl:focus-within {
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
 }
 
 .categoryTag {
@@ -1359,7 +1496,7 @@ button[type="submit"],
 }
 
 .purchaseMast,
-.purchaseDialog {
+.ledgerBottomSheet {
   background: radial-gradient(circle at 88% 4%, rgba(var(--accent-rgb), 0.22), transparent 38%), var(--surface-solid);
 }
 
@@ -1413,11 +1550,6 @@ button[type="submit"],
     will-change: auto;
   }
 
-  .dialogOverlay,
-  .purchaseDialog {
-    animation: dialogFadeIn 200ms ease;
-  }
-
   .limitStrip i {
     transition: none;
   }
@@ -1429,5 +1561,243 @@ button[type="submit"],
   .meterCard.active,
   .purchaseFab:active {
     transform: none;
+  }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Aptos", "Segoe UI", system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-neon: var(--neon);
+  --color-violet: var(--violet);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--surface-solid);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@theme {
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-marquee-vertical: marquee-vertical 30s linear infinite;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100% - var(--gap, 1rem))); }
+  }
+
+  @keyframes marquee-vertical {
+    from { transform: translateY(0); }
+    to { transform: translateY(calc(-100% - var(--gap, 1rem))); }
+  }
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { scrollbar-width: none; }
+
+  .mask-radial-fade {
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+  }
+
+  .mask-b-fade {
+    mask-image: linear-gradient(to bottom, black 60%, transparent);
+  }
+
+  .glass {
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 24px 60px -24px rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(20px) saturate(160%);
+  }
+
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    backdrop-filter: blur(16px);
+  }
+
+  .glass-thin {
+    border: 1px solid var(--glass-border);
+    background: var(--glass-thin-bg);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* A single translucent material for every card in the ledger. */
+.ledgerCard.ledgerCard {
+  border: 0;
+  border-radius: 25px;
+  color: var(--text);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.045) 42%, transparent 70%),
+    var(--card-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--glass-border), white 8%),
+    0 20px 48px rgba(0, 0, 0, 0.16),
+    inset 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(28px) saturate(175%) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(175%) brightness(1.04);
+}
+
+button.ledgerCard {
+  transition-property: transform, box-shadow, background-color;
+  transition-duration: 220ms;
+  transition-timing-function: var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.ledgerCard:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--glass-border), var(--text) 22%),
+      0 24px 54px rgba(0, 0, 0, 0.2),
+      inset 0 1px rgba(255, 255, 255, 0.24),
+      inset 0 -1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+button.ledgerCard:active {
+  transform: scale(0.96);
+}
+
+.ledgerCard.meterCard.active,
+.ledgerCard.backgroundCard.active,
+.ledgerCard.themeCard.active {
+  background:
+    linear-gradient(145deg, rgba(var(--accent-rgb), 0.16), transparent 58%),
+    var(--card-surface);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.58),
+    0 20px 48px rgba(var(--accent-rgb), 0.12),
+    inset 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.backgroundPreview {
+  border-radius: 18px;
+}
+
+.themePreview {
+  border-radius: 17px;
+}
+
+.purchaseSwipeItem,
+.purchaseSwipeRail,
+.purchaseSwipeSurface {
+  border-radius: 25px;
+}
+
+@media (max-width: 520px) {
+  .ledgerCard.ledgerCard {
+    border-radius: 22px;
+  }
+
+  .backgroundPreview,
+  .themePreview {
+    border-radius: 14px;
+  }
+
+  .purchaseSwipeItem,
+  .purchaseSwipeRail,
+  .purchaseSwipeSurface {
+    border-radius: 22px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ledgerCard.ledgerCard {
+    background: var(--surface-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }

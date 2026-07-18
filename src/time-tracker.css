@@ -118,107 +118,105 @@
 .timeLayout,
 .timeSide { display: grid; gap: 12px; }
 
-.bezel {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 31px;
-  padding: 5px;
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.13), inset 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.timerCore,
-.summaryCore,
-.timeHistory,
-.metricCore {
-  border: 1px solid var(--time-line);
-  border-radius: 25px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.075), transparent 54%), var(--glass);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-}
-
 .timerCore {
   position: relative;
   display: grid;
-  min-height: 470px;
-  place-items: center;
-  align-content: center;
-  gap: 26px;
+  min-height: 0;
+  align-content: start;
+  gap: 30px;
   overflow: hidden;
-  padding: 34px 22px 22px;
+  padding: 34px 28px 22px;
 }
 
-.timerCore::before {
-  position: absolute;
-  top: -34%;
-  left: 50%;
-  width: 90%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--time-accent-rgb), 0.2), transparent 66%);
-  content: "";
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.workDial {
+.timerOverview {
   position: relative;
   display: grid;
-  width: min(76vw, 292px);
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 50%;
-  background: conic-gradient(var(--time-accent) var(--work-progress), rgba(var(--time-accent-rgb), 0.13) 0);
-  box-shadow: 0 20px 55px rgba(var(--time-accent-rgb), 0.11), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  transform: rotate(-90deg);
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 172px);
+  align-items: center;
+  gap: 24px;
+  width: 100%;
 }
 
-.workDial::before {
-  position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 24%, rgba(255, 255, 255, 0.1), transparent 38%), var(--surface-solid);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.1), inset 0 -18px 45px rgba(0, 0, 0, 0.12);
-  content: "";
-}
-
-.workDial > div {
-  position: relative;
-  z-index: 1;
+.timerCopy {
   display: grid;
-  place-items: center;
-  gap: 8px;
-  transform: rotate(90deg);
+  min-width: 0;
+  align-content: center;
 }
 
-.workDial span,
-.workDial small {
+.timerLabel {
+  margin-bottom: 12px;
   color: var(--time-muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.workDial strong {
+.timerValue {
   color: var(--time-heading);
-  font-size: clamp(40px, 9vw, 52px);
+  font-size: clamp(38px, 8vw, 54px);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.055em;
   line-height: 1;
+  animation: timeSignal 2.8s ease-in-out infinite alternate;
 }
 
-.workDial small { color: var(--time-accent); }
+.timerRemaining {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  margin: 18px 0 0;
+  color: var(--time-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.timerRemaining b { color: var(--time-accent); font-size: 14px; font-variant-numeric: tabular-nums; line-height: 1.2; animation: timeSignal 2.8s 180ms ease-in-out infinite alternate; }
+.timerRemaining.overtime b { color: #f0c448; }
+
+.workProgress {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 172px;
+  aspect-ratio: 1;
+  place-items: center;
+  justify-self: end;
+  color: var(--time-accent);
+  filter: drop-shadow(0 16px 26px rgba(var(--time-accent-rgb), 0.12));
+  animation: progressBreathe 3.2s ease-in-out infinite alternate;
+}
+
+.workProgress svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
+.workProgress circle { fill: none; stroke-width: 8; }
+.workProgressTrack { stroke: rgba(var(--time-accent-rgb), 0.12); }
+.workProgressValue { stroke: currentColor; stroke-linecap: round; }
+
+.workProgress > span {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  color: var(--time-heading);
+}
+
+.workProgress > span strong { font-size: clamp(24px, 5vw, 32px); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1; }
+.workProgress > span small { color: var(--time-muted); font-size: 9px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; }
 
 .timeActions {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.timerFooter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .timeAction {
@@ -256,17 +254,21 @@
 
 .timeAction:hover i { transform: translateX(2px) scale(1.035); }
 .timeAction svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.timeMessage { position: relative; min-height: 18px; margin: -10px 0 0; color: var(--time-muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.timeMessage { min-height: 18px; margin: 0; color: var(--time-muted); font-size: 12px; line-height: 1.5; text-align: right; }
 
-.metricGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.metricShell { border-radius: 24px; padding: 4px; }
-.metricCore { display: grid; min-height: 130px; align-content: space-between; gap: 10px; border-radius: 19px; padding: 16px; }
-.metricCore span { color: var(--time-accent); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.metricCore strong { color: var(--time-heading); font-size: clamp(21px, 4.8vw, 27px); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.035em; }
-.metricCore small { color: var(--time-muted); font-size: 12px; line-height: 1.4; }
-.metricShell.isBreak .metricCore { background: linear-gradient(145deg, rgba(240, 196, 72, 0.11), transparent 54%), var(--glass); }
-.metricShell.isBreak strong { color: #f0c448; }
-.metricShell.isComplete strong { color: var(--time-accent); }
+.timeDetails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border-radius: 22px;
+}
+.timeDetails div { display: grid; min-width: 0; gap: 9px; padding: 18px; }
+.timeDetails div + div { border-left: 1px solid var(--time-line); }
+.timeDetails dt { color: var(--time-muted); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.timeDetails dd { overflow: hidden; margin: 0; color: var(--time-heading); font-size: clamp(17px, 4.5vw, 23px); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.035em; text-overflow: ellipsis; white-space: nowrap; }
+.timeDetails .isBreak dt,
+.timeDetails .isBreak dd { color: #f0c448; }
 
 .summaryCore { display: grid; grid-template-columns: 1fr auto; gap: 20px; padding: 22px; }
 .summaryCore h2,
@@ -298,7 +300,7 @@
 
 .timeLoading,
 .timeError { min-height: 65dvh; place-items: center; align-content: center; text-align: center; }
-.timeLoading span { width: 36px; height: 36px; border: 2px solid rgba(var(--time-accent-rgb), 0.16); border-top-color: var(--time-accent); border-radius: 50%; animation: timeSpin 900ms cubic-bezier(0.32, 0.72, 0, 1) infinite; }
+.timeLoading > [role="status"] { color: var(--time-accent); }
 .timeLoading p,
 .timeError > p { color: var(--time-muted); font-size: 13px; line-height: 1.5; }
 .timeError h1 { margin-bottom: 14px; color: var(--time-heading); font-family: var(--time-font-display); font-size: 40px; font-weight: 600; letter-spacing: -0.035em; }
@@ -306,9 +308,7 @@
 
 @media (min-width: 620px) {
   .timeTracker { gap: 16px; }
-  .timerCore { min-height: 500px; }
-  .workDial { width: 310px; }
-  .metricCore { min-height: 142px; padding: 19px; }
+  .timerCore { min-height: 0; }
   .timeHistory { padding: 26px; }
 }
 
@@ -321,12 +321,15 @@
   .timerCore,
   .summaryCore,
   .timeHistory { border-radius: 22px; }
-  .timerCore { min-height: 445px; gap: 23px; padding: 28px 14px 20px; }
-  .workDial { width: min(75vw, 276px); }
+  .timerCore { min-height: 0; gap: 28px; padding: 28px 18px 20px; }
+  .timerOverview { grid-template-columns: minmax(0, 1fr) minmax(116px, 148px); gap: 14px; }
+  .timerValue { font-size: clamp(32px, 9.5vw, 45px); }
+  .timerRemaining { max-width: 160px; }
   .timeActions { width: 100%; }
   .timeAction { min-width: 0; flex: 1; padding-left: 16px; }
   .timeAction:only-child { flex: 0 1 172px; }
-  .metricCore { min-height: 122px; padding: 14px; }
+  .timeMessage { max-width: 42%; }
+  .timeDetails div { padding: 16px 12px; }
   .summaryCore dl { grid-template-columns: 1fr; }
 }
 
@@ -345,16 +348,26 @@
   .timeTracker *::before { animation: none !important; transition-duration: 0.01ms !important; }
 }
 
-@media (prefers-reduced-transparency: reduce) {
-  .timerCore,
-  .summaryCore,
-  .timeHistory,
-  .metricCore { background: var(--surface-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 360px) {
+  .timerOverview { grid-template-columns: 1fr 112px; }
+  .timerRemaining { font-size: 11px; }
+  .timerFooter { align-items: start; flex-direction: column; }
+  .timeMessage { max-width: none; text-align: left; }
 }
 
 @keyframes timeRise {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes timeSignal {
+  from { opacity: 0.9; filter: drop-shadow(0 0 0 rgba(var(--time-accent-rgb), 0)); }
+  to { opacity: 1; filter: drop-shadow(0 0 10px rgba(var(--time-accent-rgb), 0.16)); }
+}
+
+@keyframes progressBreathe {
+  from { filter: drop-shadow(0 12px 22px rgba(var(--time-accent-rgb), 0.08)); }
+  to { filter: drop-shadow(0 18px 30px rgba(var(--time-accent-rgb), 0.2)); }
 }
 
 @keyframes timeSpin { to { transform: rotate(360deg); } }
