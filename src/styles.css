@@ -137,6 +137,11 @@ body::before {
   inset: 0;
 }
 
+.silkCanvas {
+  position: absolute !important;
+  inset: 0;
+}
+
 button,
 input {
   font: inherit;
@@ -401,6 +406,22 @@ button {
   align-items: center;
 }
 
+.pageHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageHeaderActions .pageIconButton svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
 .pageMastNote {
   max-width: 42ch;
   margin-top: 10px;
@@ -614,6 +635,14 @@ button {
 
 .backgroundCard.mesh .backgroundPreview::before { inset: -20%; background: radial-gradient(circle at 28% 35%, var(--accent), transparent 34%), radial-gradient(circle at 75% 68%, var(--glow-b), transparent 38%); filter: blur(4px); }
 .backgroundCard.mesh .backgroundPreview::after { inset: 0; background: radial-gradient(circle at 50% 50%, transparent, var(--bg) 85%); }
+.backgroundCard.silk .backgroundPreview::before { inset: -25%; background: repeating-radial-gradient(ellipse at 20% 20%, var(--accent) 0 2%, var(--bg) 7% 13%, var(--accent) 18% 20%); transform: rotate(-10deg) scale(1.35); filter: blur(3px); opacity: 0.72; }
+.backgroundCard.silk .backgroundPreview::after { inset: 0; background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.32), transparent 44%, var(--bg)); }
+.backgroundCard.veil .backgroundPreview::before { inset: -35%; background: repeating-conic-gradient(from 215deg at 48% 55%, var(--bg) 0 10deg, var(--accent) 16deg 23deg, color-mix(in oklch, var(--accent), var(--bg) 48%) 28deg 38deg, var(--bg) 44deg 62deg); filter: blur(7px); opacity: 0.82; transform: rotate(-8deg) scale(1.25); }
+.backgroundCard.veil .backgroundPreview::after { inset: 0; background: radial-gradient(ellipse at 50% 48%, transparent 12%, var(--bg) 86%); }
+.backgroundCard.aurora .backgroundPreview::before { inset: -18%; background: linear-gradient(110deg, var(--bg) 5%, var(--accent) 48%, var(--bg) 92%); filter: blur(8px); transform: skewY(-10deg) translateY(-18%); }
+.backgroundCard.aurora .backgroundPreview::after { inset: 0; background: linear-gradient(to bottom, transparent 18%, var(--bg) 92%); opacity: 0.62; }
+.backgroundCard.rays .backgroundPreview::before { inset: -35%; background: repeating-conic-gradient(from 130deg at 92% 4%, transparent 0 9deg, var(--accent) 13deg, #96c8ff 19deg, transparent 28deg); filter: blur(4px); opacity: 0.78; }
+.backgroundCard.rays .backgroundPreview::after { inset: 0; background: radial-gradient(circle at 94% 2%, #fff 0, var(--accent) 5%, transparent 25%); }
 .backgroundCard.dusk .backgroundPreview::before { inset: -20%; background: radial-gradient(circle at 22% 25%, #f6a1c8, transparent 28%), radial-gradient(circle at 78% 40%, #7597de, transparent 35%), radial-gradient(circle at 50% 88%, #2b1055, #0d0221 70%); filter: blur(3px); }
 .backgroundCard.dusk .backgroundPreview::after { inset: 0; background: linear-gradient(135deg, transparent 30%, #0d0221 100%); opacity: 0.38; }
 .backgroundCard.water .backgroundPreview { background: #909090; }
@@ -708,13 +737,13 @@ button {
 
 /* Theme layer keeps the existing ledger components coherent without duplicating them. */
 body { color: var(--text); background: var(--bg); transition: background-color 700ms ease, color 700ms ease; }
-h1, .homeGrid strong, .meterCard strong, .purchaseCardHead strong, .ledgerBottomSheet h2 { color: var(--heading); }
+h1, .homeGrid strong, .meterCard strong, .purchaseCardHead strong, .ledgerMorphingModal h2 { color: var(--heading); }
 .eyebrow, .textButton { color: var(--accent); }
 .overviewIcon { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
 .bottomNav button.active { color: var(--heading); }
 .bottomNav button.active .navIcon, button[type="submit"], .purchaseFab, .categoryFilters button.active { color: var(--accent-ink); background: var(--accent); box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.24), inset 0 1px rgba(255,255,255,.4); }
 .bottomNav, .homeGrid button, .entryPanel, .authPanel, .meterCard, .history article, .purchaseHistory .purchaseCard { background-color: var(--surface); }
-.purchaseMast, .ledgerBottomSheet { background-color: var(--surface-solid); }
+.purchaseMast, .ledgerMorphingModal { background-color: var(--surface-solid); }
 :focus-visible { outline-color: var(--accent); }
 
 @keyframes ambientGlow {
@@ -819,28 +848,100 @@ h1 span {
   font-size: 11px;
 }
 
-.meterList {
+.meterCabinet {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
+}
+
+.meterGroup {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  padding: 18px;
+  background: color-mix(in oklch, var(--glass), transparent 12%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12), inset 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+.meterGroup.current {
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), transparent 54%), color-mix(in oklch, var(--glass), transparent 8%);
+  box-shadow: 0 22px 50px rgba(var(--accent-rgb), 0.08), inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.meterGroupHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.meterGroupHead div {
+  display: grid;
+  gap: 4px;
+}
+
+.meterGroupHead p {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.meterGroupHead h2 {
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.meterGroupHead > span {
+  max-width: 29ch;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: end;
+  text-wrap: pretty;
+}
+
+.meterPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .meterCard {
   display: grid;
-  min-height: 126px;
-  padding: 14px;
+  min-height: 132px;
+  gap: 10px;
+  padding: 16px;
   border: 1px solid rgba(238, 245, 234, 0.12);
-  border-radius: 8px;
+  border-radius: 18px;
   color: #eef5ea;
   background: #18211d;
   text-align: left;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition-property: transform, border-color, background-color, box-shadow;
+  transition-duration: 220ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.meterElectricBorder {
+  min-width: 0;
+  border-radius: 18px;
+}
+
+.meterElectricBorder .meterCard {
+  width: 100%;
+  height: 100%;
 }
 
 .meterCard.active {
   border-color: #f0c448;
-  transform: translateY(-3px);
 }
 
 .meterCard.danger {
@@ -851,18 +952,118 @@ h1 span {
   background: #332916;
 }
 
-.meterCard span,
-.meterCard small,
+.meterCard > span,
+.meterCard > small,
 .history time {
   color: #aebbb3;
   font-size: 12px;
 }
 
 .meterCard strong {
-  align-self: end;
   color: #fff8d6;
-  font-size: 36px;
+  font-size: 38px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
   line-height: 1;
+}
+
+.meterCard strong small {
+  color: var(--muted);
+  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.meterCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.meterCardTop > span {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meterCardTop i {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.meterCard.active .meterCardTop i {
+  color: var(--accent);
+}
+
+.meterReading {
+  align-self: end;
+}
+
+.meterInstall {
+  display: grid;
+  min-height: 132px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px dashed color-mix(in oklch, var(--glass-border), var(--accent) 24%);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.meterInstall > div {
+  display: grid;
+  gap: 4px;
+}
+
+.meterInstall strong {
+  color: var(--heading);
+  font-size: 14px;
+}
+
+.meterInstall small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.installSignal {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.16);
+}
+
+.installSignal i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0.1);
+}
+
+.installBadge {
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.09);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .panelHead {
@@ -937,6 +1138,69 @@ input[type="number"]::-webkit-outer-spin-button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.purchaseFormRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.purchaseFormRow > label {
+  position: relative;
+  gap: 6px;
+  padding: 0 4px;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.purchaseFormRow > label::after {
+  position: absolute;
+  right: 18px;
+  bottom: 19px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted-foreground);
+  border-bottom: 2px solid var(--muted-foreground);
+  content: "";
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.purchaseFormRow > label select {
+  min-height: 44px;
+  margin-inline: -4px;
+  width: calc(100% + 8px);
+  border-color: var(--border);
+  border-radius: 999px;
+  padding-inline: 14px 44px;
+  background: transparent;
+  color-scheme: dark;
+  appearance: none;
+}
+
+.purchaseFormRow input[type="date"] {
+  color-scheme: dark;
+}
+
+.purchaseFormRow input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0;
+  width: 44px;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.purchaseDateIcon {
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: var(--surface-solid);
 }
 
 .unitSliderField {
@@ -1090,39 +1354,44 @@ button[type="submit"] {
   height: 25px;
 }
 
-.ledgerBottomSheet {
+.ledgerMorphingModal {
   border-color: rgba(var(--accent-rgb), 0.3);
   color: var(--text);
   background: radial-gradient(circle at 88% 4%, rgba(var(--accent-rgb), 0.18), transparent 38%), var(--surface-solid);
-  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.ledgerBottomSheet > div:last-child {
-  padding-bottom: max(24px, env(safe-area-inset-bottom));
+.morphingModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.purchaseSwipeAction svg {
-  width: 18px;
-  height: 18px;
+.morphingModalHeader h2 {
+  font-size: 20px;
 }
 
-.purchaseSwipeItem,
-.purchaseSwipeRail,
-.purchaseSwipeSurface {
-  border-radius: 18px;
+.morphingModalHeader p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.purchaseSwipeItem,
-.purchaseSwipeRail {
-  background: color-mix(in oklch, var(--surface-solid), var(--accent) 7%);
-}
-
-.purchaseSwipeSurface {
-  min-height: 0;
+.morphingModalHeader > button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  min-height: 32px;
+  place-items: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
   padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  color: var(--muted);
+  background: var(--glass-thin-bg);
+  font-size: 20px;
+  line-height: 1;
 }
 
 button:disabled {
@@ -1292,8 +1561,8 @@ button:disabled {
 
 .purchaseHistory .purchaseCard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 13px 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
   padding: 16px;
   border: 1px solid rgba(238, 245, 234, 0.1);
   border-radius: 18px;
@@ -1331,6 +1600,51 @@ button:disabled {
   min-width: 0;
   align-items: center;
   gap: 9px;
+}
+
+.purchaseCardActions {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  gap: 4px;
+}
+
+.purchaseCardActions button {
+  display: grid;
+  width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.purchaseCardActions button.danger {
+  color: #ff6b63;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .purchaseCardActions button:hover {
+    color: var(--heading);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .purchaseCardActions button.danger:hover {
+    color: #ff8983;
+  }
+}
+
+.purchaseCardActions button:active {
+  transform: scale(0.96);
+}
+
+.purchaseCardActions svg {
+  width: 18px;
+  height: 18px;
 }
 
 .purchaseMeta time {
@@ -1415,11 +1729,12 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .ledgerBottomSheet input {
+  .ledgerMorphingModal input {
     font-size: 16px;
   }
 
-  .purchaseFields {
+  .purchaseFields,
+  .purchaseFormRow {
     grid-template-columns: 1fr;
   }
 }
@@ -1459,7 +1774,7 @@ h1 span,
 .history strong,
 .purchaseCardHead b,
 .purchaseCardHead strong,
-.ledgerBottomSheet h2 {
+.ledgerMorphingModal h2 {
   color: var(--heading);
 }
 
@@ -1496,7 +1811,7 @@ button[type="submit"],
 }
 
 .purchaseMast,
-.ledgerBottomSheet {
+.ledgerMorphingModal {
   background: radial-gradient(circle at 88% 4%, rgba(var(--accent-rgb), 0.22), transparent 38%), var(--surface-solid);
 }
 
@@ -1771,12 +2086,6 @@ button.ledgerCard:active {
   border-radius: 17px;
 }
 
-.purchaseSwipeItem,
-.purchaseSwipeRail,
-.purchaseSwipeSurface {
-  border-radius: 25px;
-}
-
 @media (max-width: 520px) {
   .ledgerCard.ledgerCard {
     border-radius: 22px;
@@ -1787,11 +2096,44 @@ button.ledgerCard:active {
     border-radius: 14px;
   }
 
-  .purchaseSwipeItem,
-  .purchaseSwipeRail,
-  .purchaseSwipeSurface {
-    border-radius: 22px;
+  .limitStrip b:first-of-type {
+    transform: translateX(-115%);
   }
+
+  .limitStrip b:last-of-type {
+    transform: translateX(15%);
+  }
+
+  .meterGroup {
+    border-radius: 24px;
+    padding: 16px;
+  }
+
+  .meterGroupHead {
+    gap: 12px;
+  }
+
+  .meterGroupHead > span {
+    max-width: 19ch;
+  }
+
+  .meterCard {
+    min-width: 0;
+    padding: 15px;
+  }
+
+  .meterCardTop > span {
+    color: var(--text);
+  }
+
+  .currentMeters {
+    grid-template-columns: 1fr;
+  }
+
+  .meterInstall {
+    min-height: 84px;
+  }
+
 }
 
 @media (prefers-reduced-transparency: reduce) {

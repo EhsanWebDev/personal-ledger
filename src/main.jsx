@@ -1,35 +1,38 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Limelight } from "@getlimelight/sdk";
-import { Archive, Home as HomeNavIcon, NotebookPen, Pencil, Settings, Timer, Trash2, Users, Zap } from "lucide-react";
+import { Archive, CalendarDays, History, Home as HomeNavIcon, NotebookPen, Pencil, Settings, Timer, Trash2, Users, Zap } from "lucide-react";
 import { AnimatedToastStack, useAnimatedToastStack } from "@/components/motion/animated-toast-stack";
-import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Dock, DockItem } from "@/components/motion/dock";
 import { Loader } from "@/components/motion/loader";
 import { Input } from "@/components/motion/input";
 import { RangeSlider } from "@/components/motion/range-slider";
-import { SwipeableList } from "@/components/motion/swipeable-list";
 import { NumberTicker } from "@/components/motion/number-ticker";
-import { WheelPicker } from "@/components/motion/wheel-picker";
+import ElectricBorder from "@/components/ElectricBorder";
+import DarkVeil from "@/components/DarkVeil";
+import { Aurora } from "@/components/motion/aurora";
+import { SideRays } from "@/components/motion/side-rays";
 import { ShaderBackground } from "./components/motion/shader-background";
 import { bandFor } from "./electricity.js";
 import { supabase } from "./supabase";
 import { TimeTracker } from "./time-tracker";
 import "./styles.css";
 
+const Silk = lazy(() => import("./components/motion/silk"));
+
 Limelight.connect();
 
 const defaultMeters = ["old-modern", "old-classic", "new - 1"];
 const renamedMeters = { "Main meter": "old-modern", "Upstairs meter": "old-classic", "Backup meter": "new - 1" };
 const meterName = (name) => renamedMeters[name] ?? name;
+const meterLabel = (name) => ({ "old-modern": "Old modern", "old-classic": "Old classic", "new - 1": "New meter 1" })[name] ?? name;
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
 const unitsFor = (current, previous) => Math.max(0, Number(current || 0) - Number(previous || 0));
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const datePickerMonths = monthNames.map((label, index) => ({ label, value: String(index + 1).padStart(2, "0") }));
-const datePickerYears = Array.from({ length: new Date().getFullYear() - 1899 }, (_, index) => String(1900 + index));
 const purchaseCategories = ["Mobile", "Laptop", "PC", "TWS earbuds", "Smartwatch", "Tablet", "Camera", "Gaming"];
 const currency = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
 const formatCurrency = (value) => currency.format(value);
@@ -39,29 +42,6 @@ function AppNumber({ value, ...props }) {
   return <NumberTicker value={Number(value) || 0} duration={0.55} {...props} />;
 }
 
-function DateWheelPicker({ value, onValueChange, disabled }) {
-  const [year, month, day] = value.split("-");
-  const dayCount = new Date(Number(year), Number(month), 0).getDate();
-  const days = useMemo(() => Array.from({ length: dayCount }, (_, index) => ({ label: String(index + 1), value: String(index + 1).padStart(2, "0") })), [dayCount]);
-  const update = (part, next) => {
-    const nextYear = part === "year" ? next : year;
-    const nextMonth = part === "month" ? next : month;
-    const lastDay = new Date(Number(nextYear), Number(nextMonth), 0).getDate();
-    const nextDay = part === "day" ? next : String(Math.min(Number(day), lastDay)).padStart(2, "0");
-    onValueChange(`${nextYear}-${nextMonth}-${nextDay}`);
-  };
-
-  return (
-    <fieldset className="grid gap-2 border-0 p-0">
-      <legend className="mb-2 text-[13px] font-bold text-foreground">Date purchased</legend>
-      <div className="flex items-stretch gap-1 rounded-2xl border border-border bg-background p-1.5">
-        <WheelPicker options={datePickerMonths} value={month} onValueChange={(next) => update("month", next)} disabled={disabled} className="min-w-0 flex-[1.35] border-0 bg-transparent" aria-label="Purchase month" />
-        <WheelPicker options={days} value={day} onValueChange={(next) => update("day", next)} disabled={disabled} className="min-w-0 flex-1 border-0 bg-transparent" aria-label="Purchase day" />
-        <WheelPicker options={datePickerYears} value={year} onValueChange={(next) => update("year", next)} disabled={disabled} className="min-w-0 flex-1 border-0 bg-transparent" aria-label="Purchase year" />
-      </div>
-    </fieldset>
-  );
-}
 const themes = [
   { id: "ledger", name: "Ledger", note: "Moss & brass", colors: ["oklch(0.159 0.012 154)", "oklch(0.766 0.143 88)"], shaderColors: ["#101412", "#f0c448"] },
   { id: "ruby", name: "Ruby", note: "Coal & pomegranate", colors: ["oklch(0.145 0.018 25)", "oklch(0.72 0.165 25)"], shaderColors: ["#110707", "#fb756e"] },
@@ -74,6 +54,10 @@ const themes = [
 ];
 const backgrounds = [
   { id: "mesh", name: "Mesh", note: "Soft and fluid" },
+  { id: "silk", name: "Silk", note: "Woven light" },
+  { id: "veil", name: "Dark Veil", note: "Silken aurora" },
+  { id: "aurora", name: "Aurora", note: "Northern glow" },
+  { id: "rays", name: "Rays", note: "Prismatic light" },
   { id: "dusk", name: "Static Mesh", note: "Dusk" },
   { id: "water", name: "Water", note: "Liquid light" },
   { id: "neuro", name: "Neuro", note: "Living noise" },
@@ -114,12 +98,12 @@ function App() {
   });
   const [readings, setReadings] = useState([]);
   const [readingsLoading, setReadingsLoading] = useState(true);
-  const [activeMeter, setActiveMeter] = useState(defaultMeters[0]);
+  const [activeMeter, setActiveMeter] = useState(defaultMeters[2]);
   const [readingValue, setReadingValue] = useState("0");
   const [busy, setBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [readingSheetOpen, setReadingSheetOpen] = useState(false);
+  const [readingModalOpen, setReadingModalOpen] = useState(false);
   const [purchases, setPurchases] = useState([]);
   const [purchasesLoading, setPurchasesLoading] = useState(true);
   const [purchaseForm, setPurchaseForm] = useState({ item_name: "", category: "", purchase_price: "", purchase_date: today() });
@@ -127,7 +111,7 @@ function App() {
   const [purchaseQuery, setPurchaseQuery] = useState("");
   const [purchaseBusy, setPurchaseBusy] = useState(false);
   const [purchaseMessage, setPurchaseMessage] = useState("");
-  const [purchaseSheetOpen, setPurchaseSheetOpen] = useState(false);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
     loadReadings();
@@ -211,7 +195,7 @@ function App() {
     } else {
       setMessage("Units updated.");
       updateToast(toastId, { title: "Meter units added", description: `${selectedUnits} units recorded for ${activeMeter}.`, status: "success", icon: <Zap />, duration: 4200, dismissible: true });
-      setReadingSheetOpen(false);
+      setReadingModalOpen(false);
       loadReadings();
     }
   }
@@ -302,7 +286,7 @@ function App() {
       setEditingPurchase(null);
       setPurchaseMessage(isEditing ? "Purchase updated." : "Purchase saved.");
       updateToast(toastId, { title: isEditing ? "Purchase updated" : "Purchase added", description: `${itemName} · ${currency.format(price)}`, status: "success", icon: <Archive />, duration: 4200, dismissible: true });
-      setPurchaseSheetOpen(false);
+      setPurchaseModalOpen(false);
       loadPurchases();
     } catch (error) {
       setPurchaseMessage(error.message);
@@ -321,7 +305,7 @@ function App() {
       purchase_date: purchase.purchase_date,
     });
     setPurchaseMessage("");
-    setPurchaseSheetOpen(true);
+    setPurchaseModalOpen(true);
   }
 
   function cancelPurchaseEdit() {
@@ -370,10 +354,10 @@ function App() {
         busy={purchaseBusy}
         message={purchaseMessage}
         editingPurchase={editingPurchase}
-        sheetOpen={purchaseSheetOpen}
+        modalOpen={purchaseModalOpen}
         setForm={setPurchaseForm}
         setQuery={setPurchaseQuery}
-        setSheetOpen={setPurchaseSheetOpen}
+        setModalOpen={setPurchaseModalOpen}
         onSubmit={savePurchase}
         onEdit={editPurchase}
         onCancelEdit={cancelPurchaseEdit}
@@ -381,7 +365,10 @@ function App() {
       /> : screen === "appearance" ? <More theme={theme} background={background} onThemeChange={setTheme} onBackgroundChange={setBackground} /> : screen === "notes" ? <MiniAppPlaceholder eyebrow="Tracking" title="Personal notes" note="A private place for quick thoughts, lists, and things worth remembering." icon={<NotebookPen />} /> : screen === "teams" ? <MiniAppPlaceholder eyebrow="Settings" title="Teams" note="Your shared spaces and team access will live here." icon={<Users />} /> : <>
       <PageHeader
         eyebrow="Electricity"
-        trailing={<span className="pageStat"><strong><AppNumber value={activeUnits} /></strong> units</span>}
+        trailing={<div className="pageHeaderActions">
+          <button className="pageIconButton" type="button" aria-label="View meter history" title="Meter history" onClick={() => setScreen("readings")}><History /></button>
+          <span className="pageStat"><strong><AppNumber value={activeUnits} /></strong> units</span>
+        </div>}
       >
         Power <em>usage.</em>
       </PageHeader>
@@ -396,33 +383,32 @@ function App() {
         <span>220</span>
       </section>
 
-      <section className="meterList" aria-label="Meters">
-        {meters.map((meter) => (
-          <button
-            className={meter.name === activeMeter ? `ledgerCard meterCard active ${meter.band}` : `ledgerCard meterCard ${meter.band}`}
-            key={meter.name}
-            type="button"
-            onClick={() => setActiveMeter(meter.name)}
-          >
-            <span>{meter.name}</span>
-            <strong>{meter.latest ? meter.units : "--"}</strong>
-            <small>{meter.name === activeMeter
-              ? meter.latest ? "Selected" : "Selected · no reading yet"
-              : meter.latest ? `${meter.latest.current_reading} now` : "No reading yet"}</small>
-          </button>
-        ))}
+      <section className="meterCabinet" aria-label="Electricity meters">
+        <MeterGroup eyebrow="Previous meters" title="Retired pair" note="Kept available for older readings.">
+          <div className="meterPair">
+            {meters.filter((meter) => meter.name.startsWith("old-")).map((meter) => <MeterCard key={meter.name} meter={meter} activeMeter={activeMeter} onSelect={setActiveMeter} />)}
+          </div>
+        </MeterGroup>
+        <MeterGroup current eyebrow="Current supply" title="New meters" note="The active line and its planned replacement.">
+          <div className="meterPair currentMeters">
+            {meters.filter((meter) => !meter.name.startsWith("old-")).map((meter) => <MeterCard key={meter.name} meter={meter} activeMeter={activeMeter} onSelect={setActiveMeter} />)}
+            <article className="meterInstall" aria-label="New meter 2 installation status">
+              <span className="installSignal" aria-hidden="true"><i /></span>
+              <div><strong>New meter 2</strong><small>Installing soon</small></div>
+              <span className="installBadge">Planned</span>
+            </article>
+          </div>
+        </MeterGroup>
       </section>
 
-      <section className="history" aria-label="Recent readings">
-        <div className="historyHead">
-          <h2>Recent</h2>
-          <button className="textButton" type="button" onClick={() => setScreen("readings")}>See all</button>
+      {readingsLoading ? <Loader variant="dots" size={18} label="Loading meter readings" className="emptyState text-primary" /> : null}
+
+      <button className="purchaseFab" type="button" aria-label="Update electricity units" onClick={() => { setMessage(""); setReadingValue(String(readingCurrent)); setReadingModalOpen(true); }}><PlusIcon /></button>
+      <MorphingModal viewId={readingModalOpen ? "electricity-reading" : null} onClose={() => setReadingModalOpen(false)} placement="top" ariaLabel="Update electricity units" className="ledgerMorphingModal max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="morphingModalHeader">
+          <div><h2>Update units</h2><p>{activeMeter}</p></div>
+          <button type="button" aria-label="Close update units form" onClick={() => setReadingModalOpen(false)}>×</button>
         </div>
-        {readingsLoading ? <Loader variant="dots" size={18} label="Loading recent readings" className="emptyState text-primary" /> : readings.length ? readings.slice(0, 3).map((reading) => <ReadingRow key={reading.id} reading={reading} />) : <p className="emptyState">Your saved meter readings will appear here.</p>}
-      </section>
-
-      <button className="purchaseFab" type="button" aria-label="Update electricity units" onClick={() => { setMessage(""); setReadingValue(String(readingCurrent)); setReadingSheetOpen(true); }}><PlusIcon /></button>
-      <BottomSheet open={readingSheetOpen} onOpenChange={setReadingSheetOpen} snapPoints={["auto", 0.82]} title="Update units" description={activeMeter} className="ledgerBottomSheet">
         <form onSubmit={saveReading}>
           <div className="unitSliderField">
             <div className="readingValueFields">
@@ -433,10 +419,10 @@ function App() {
             <RangeSlider value={selectedUnits} onValueChange={(units) => setReadingValue(String(readingPrevious + units))} min={0} max={200} step={1} tickStep={10} haptic disabled={busy} aria-label="Electricity units used" />
             <div className="unitSliderLimits" aria-hidden="true"><span>0</span><span>200</span></div>
           </div>
-          <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2">Updating <Loader variant="dots" size={14} label="Updating electricity units" /></span> : "Update units"}</button><button className="secondaryButton" type="button" disabled={busy} onClick={() => setReadingSheetOpen(false)}>Cancel</button></div>
+          <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2">Updating <Loader variant="dots" size={14} label="Updating electricity units" /></span> : "Update units"}</button><button className="secondaryButton" type="button" disabled={busy} onClick={() => setReadingModalOpen(false)}>Cancel</button></div>
           {message && <p className="message" aria-live="polite">{message}</p>}
         </form>
-      </BottomSheet>
+      </MorphingModal>
       </>}
       <AppNavigation screen={screen} onNavigate={setScreen} />
     </main>
@@ -478,6 +464,20 @@ function MiniAppPlaceholder({ eyebrow, title, note, icon }) {
 
 function AppBackground({ background, theme }) {
   const [base, accent] = themes.find(({ id }) => id === theme)?.shaderColors ?? themes[0].shaderColors;
+  if (background === "silk") return <div className="shaderBackdrop" aria-hidden="true">
+    <Suspense fallback={null}><Silk key={theme} speed={5} scale={1} color={accent} noiseIntensity={1.5} rotation={0} /></Suspense>
+  </div>;
+  const veilHue = { ledger: 35, ruby: -45, tide: 75, iris: 0, slate: 15, sienna: -25, lagoon: 45, quartz: 55 }[theme] ?? 0;
+  if (background === "veil") return <div className="shaderBackdrop" aria-hidden="true">
+    <DarkVeil key={`${theme}-${background}`} hueShift={veilHue} noiseIntensity={0.025} speed={0.22} warpAmount={0.18} resolutionScale={0.8} />
+  </div>;
+  if (background === "aurora") return <div className="shaderBackdrop" aria-hidden="true">
+    <Aurora key={`${theme}-${background}`} colorStops={[base, accent, base]} blend={0.55} amplitude={1.15} speed={0.5} />
+  </div>;
+  if (background === "rays") return <div className="shaderBackdrop" aria-hidden="true">
+    <SideRays key={`${theme}-${background}`} className="shaderCanvas" rayColor1={accent} rayColor2="#96c8ff" />
+  </div>;
+
   const shared = { className: "shaderCanvas" };
   const props = background === "dusk"
     ? { ...shared, variant: "static-mesh-gradient", colors: ["#2b1055", "#7597de", "#f6a1c8", "#0d0221"] }
@@ -492,10 +492,38 @@ function AppBackground({ background, theme }) {
 
 function ReadingRow({ reading }) {
   return <article className="ledgerCard">
-    <span>{reading.meter_name}</span>
+    <span>{meterLabel(reading.meter_name)}</span>
     <strong>{unitsFor(reading.current_reading, reading.previous_reading)} units</strong>
     <time>{formatRecentDate(reading.created_at ?? reading.reading_date)}</time>
   </article>;
+}
+
+function MeterGroup({ eyebrow, title, note, current = false, children }) {
+  return <section className={`meterGroup${current ? " current" : ""}`}>
+    <header className="meterGroupHead">
+      <div><p>{eyebrow}</p><h2>{title}</h2></div>
+      <span>{note}</span>
+    </header>
+    {children}
+  </section>;
+}
+
+function MeterCard({ meter, activeMeter, onSelect }) {
+  const active = meter.name === activeMeter;
+  const card = <button
+    className={active ? `ledgerCard meterCard active ${meter.band}` : `ledgerCard meterCard ${meter.band}`}
+    type="button"
+    aria-pressed={active}
+    onClick={() => onSelect(meter.name)}
+  >
+    <span className="meterCardTop"><span>{meterLabel(meter.name)}</span><i>{active ? "Selected" : "Meter"}</i></span>
+    <strong>{meter.latest ? meter.units : "—"}<small> units</small></strong>
+    <span className="meterReading">{meter.latest ? `${meter.latest.current_reading} current reading` : "No reading yet"}</span>
+  </button>;
+
+  return active
+    ? <ElectricBorder color="var(--accent)" speed={0.7} chaos={0.1} borderRadius={18} className="meterElectricBorder">{card}</ElectricBorder>
+    : card;
 }
 
 function PageHeader({ eyebrow, children, note, leading, trailing }) {
@@ -596,7 +624,7 @@ function PlusIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>;
 }
 
-function Purchases({ purchases, loading, form, query, busy, message, editingPurchase, sheetOpen, setForm, setQuery, setSheetOpen, onSubmit, onEdit, onCancelEdit, onDelete }) {
+function Purchases({ purchases, loading, form, query, busy, message, editingPurchase, modalOpen, setForm, setQuery, setModalOpen, onSubmit, onEdit, onCancelEdit, onDelete }) {
   const [category, setCategory] = useState("All");
   const categories = ["All", ...new Set(purchases.map((purchase) => purchase.category).filter(Boolean))];
   const formCategories = [...new Set([...purchaseCategories, ...categories.slice(1)])];
@@ -605,19 +633,8 @@ function Purchases({ purchases, loading, form, query, busy, message, editingPurc
     return matchesQuery && (category === "All" || purchase.category === category);
   });
   const total = purchases.reduce((sum, purchase) => sum + Number(purchase.purchase_price), 0);
-  const swipeablePurchases = matching.map((purchase) => ({
-    id: String(purchase.id),
-    content: <article className="ledgerCard purchaseCard">
-      <div className="purchaseCardHead"><b>{purchase.item_name}</b><strong>{currency.format(purchase.purchase_price)}</strong></div>
-      <div className="purchaseMeta"><span className="categoryTag">{purchase.category}</span><time>{new Date(`${purchase.purchase_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time></div>
-    </article>,
-    rightActions: [
-      { id: "edit", label: `Edit ${purchase.item_name}`, icon: <Pencil />, disabled: busy, onClick: () => onEdit(purchase) },
-      { id: "delete", label: `Delete ${purchase.item_name}`, icon: <Trash2 />, tone: "danger", disabled: busy, onClick: () => onDelete(purchase) },
-    ],
-  }));
-  const closeSheet = () => {
-    setSheetOpen(false);
+  const closeModal = () => {
+    setModalOpen(false);
     onCancelEdit();
   };
   return <>
@@ -632,24 +649,39 @@ function Purchases({ purchases, loading, form, query, busy, message, editingPurc
     <section className="history purchaseHistory" aria-label="Purchase history">
       <div className="collectionHead"><div><p className="eyebrow">Inventory</p><h2>Collection</h2></div><Input className="search" type="search" aria-label="Search purchases" placeholder="Find an item" value={query} onChange={setQuery} classNames={{ field: "searchInputField" }} /></div>
       <div className="categoryFilters" aria-label="Filter by category">{categories.map((item) => <button className={item === category ? "active" : ""} type="button" key={item} aria-pressed={item === category} onClick={() => setCategory(item)}>{item}</button>)}</div>
-      {message && !sheetOpen && <p className="message" aria-live="polite">{message}</p>}
-      {loading ? <Loader variant="dots" size={18} label="Loading purchases" className="emptyState text-primary" /> : matching.length ? <SwipeableList items={swipeablePurchases} className="purchaseCards" classNames={{ item: "purchaseSwipeItem", rail: "purchaseSwipeRail", action: "purchaseSwipeAction", surface: "purchaseSwipeSurface" }} /> : <p className="emptyState">{purchases.length ? "No items match these filters." : "Add your first gadget to build your purchase history."}</p>}
+      {message && !modalOpen && <p className="message" aria-live="polite">{message}</p>}
+      {loading ? <Loader variant="dots" size={18} label="Loading purchases" className="emptyState text-primary" /> : matching.length ? <div className="purchaseCards">{matching.map((purchase) => <article className="ledgerCard purchaseCard" key={purchase.id}>
+        <div className="purchaseCardHead"><b>{purchase.item_name}</b><strong>{currency.format(purchase.purchase_price)}</strong></div>
+        <div className="purchaseMeta"><span className="categoryTag">{purchase.category}</span><time>{new Date(`${purchase.purchase_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time></div>
+        <div className="purchaseCardActions">
+          <button type="button" aria-label={`Edit ${purchase.item_name}`} disabled={busy} onClick={() => onEdit(purchase)}><Pencil /></button>
+          <button className="danger" type="button" aria-label={`Delete ${purchase.item_name}`} disabled={busy} onClick={() => onDelete(purchase)}><Trash2 /></button>
+        </div>
+      </article>)}</div> : <p className="emptyState">{purchases.length ? "No items match these filters." : "Add your first gadget to build your purchase history."}</p>}
     </section>
 
-    <button className="purchaseFab" type="button" aria-label="Add purchase" onClick={() => { onCancelEdit(); setSheetOpen(true); }}><PlusIcon /></button>
-    <BottomSheet open={sheetOpen} onOpenChange={(open) => open ? setSheetOpen(true) : closeSheet()} snapPoints={["auto", 0.92]} title={editingPurchase ? "Update purchase" : "Add to collection"} description="Keep the details simple — you can edit them later." className="ledgerBottomSheet">
+    <button className="purchaseFab" type="button" aria-label="Add purchase" onClick={() => { onCancelEdit(); setModalOpen(true); }}><PlusIcon /></button>
+    <MorphingModal viewId={modalOpen ? editingPurchase ? "purchase-edit" : "purchase-new" : null} onClose={closeModal} placement="top" ariaLabel={editingPurchase ? "Update purchase" : "Add purchase"} className="ledgerMorphingModal max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <div className="morphingModalHeader">
+        <div><h2>{editingPurchase ? "Update purchase" : "Add to collection"}</h2><p>Keep the details simple — you can edit them later.</p></div>
+        <button type="button" aria-label="Close purchase form" onClick={closeModal}>×</button>
+      </div>
       <form className="purchaseForm" onSubmit={onSubmit}>
-        <Input label="Item name" type="text" required autoComplete="off" autoFocus placeholder="e.g. Sony WH-1000XM5" value={form.item_name} onChange={(item_name) => setForm({ ...form, item_name })} />
-        <label>Category<select required value={form.category} disabled={busy} onChange={(event) => setForm({ ...form, category: event.target.value })}>
-          <option value="" disabled>Choose a category</option>
-          {formCategories.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select></label>
-        <Input label="Price (PKR)" type="number" required min="0" step="1" inputMode="numeric" placeholder="0" value={form.purchase_price} onChange={(purchase_price) => setForm({ ...form, purchase_price })} />
-        <DateWheelPicker value={form.purchase_date} onValueChange={(purchase_date) => setForm({ ...form, purchase_date })} disabled={busy} />
-        <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2">Saving <Loader variant="dots" size={14} label="Saving purchase" /></span> : editingPurchase ? "Save changes" : "Save purchase"}</button><button className="secondaryButton" type="button" onClick={closeSheet} disabled={busy}>Cancel</button></div>
+        <div className="purchaseFormRow">
+          <Input label="Item name" type="text" required autoComplete="off" autoFocus placeholder="e.g. Sony WH-1000XM5" value={form.item_name} onChange={(item_name) => setForm({ ...form, item_name })} />
+          <Input label="Price (PKR)" type="number" required min="0" step="1" inputMode="numeric" placeholder="0" value={form.purchase_price} onChange={(purchase_price) => setForm({ ...form, purchase_price })} />
+        </div>
+        <div className="purchaseFormRow">
+          <label>Category<select required value={form.category} disabled={busy} onChange={(event) => setForm({ ...form, category: event.target.value })}>
+            <option value="" disabled>Choose a category</option>
+            {formCategories.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select></label>
+          <Input label="Date purchased" type="date" required disabled={busy} value={form.purchase_date} rightIcon={<CalendarDays />} classNames={{ rightIcon: "purchaseDateIcon" }} onChange={(purchase_date) => setForm({ ...form, purchase_date })} />
+        </div>
+        <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2">Saving <Loader variant="dots" size={14} label="Saving purchase" /></span> : editingPurchase ? "Save changes" : "Save purchase"}</button><button className="secondaryButton" type="button" onClick={closeModal} disabled={busy}>Cancel</button></div>
         {message && <p className="message" aria-live="polite">{message}</p>}
       </form>
-    </BottomSheet>
+    </MorphingModal>
   </>;
 }
 

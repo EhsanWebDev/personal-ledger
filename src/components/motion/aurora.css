@@ -1,0 +1,10 @@
+.auroraContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.auroraContainer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
