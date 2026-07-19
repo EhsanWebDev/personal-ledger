@@ -178,7 +178,6 @@ export function TimeTracker({ showToast, updateToast }) {
       <header className="timeMast historyMast">
         <button className="timeIconButton" type="button" aria-label="Back to time tracking" onClick={() => setShowHistory(false)}><BackIcon /></button>
         <div>
-          <p className="timeEyebrow">Previous workdays</p>
           <h1>Work <em>history.</em></h1>
         </div>
         <span><NumberTicker value={display.history.length} duration={0.55} /> days</span>
@@ -190,7 +189,6 @@ export function TimeTracker({ showToast, updateToast }) {
   return <section className="timeTracker">
     <header className="timeMast">
       <div>
-        <p className="timeEyebrow">Workday · {timezone}</p>
         <h1>Time <em>tracking.</em></h1>
       </div>
       <div className="timeMastActions">

@@ -7,6 +7,7 @@
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --mast-title-size: clamp(44px, 5vw, 64px);
   --bg: #101412;
   --surface: rgba(24, 33, 29, 0.72);
   --surface-solid: #18211d;
@@ -102,9 +103,14 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   position: relative;
-  min-width: 320px;
   min-height: 100vh;
   margin: 0;
   background:
@@ -368,7 +374,7 @@ button {
 
 .pageMast.hasLeading {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr);
   align-items: center;
 }
 
@@ -388,16 +394,25 @@ button {
 .pageMast h1 {
   color: var(--heading);
   font-family: var(--font-display);
-  font-size: clamp(44px, 9vw, 64px);
+  font-size: var(--mast-title-size);
   font-weight: 600;
   letter-spacing: -0.045em;
   line-height: 0.95;
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
 .pageMast h1 em {
+  display: inline;
   color: var(--accent);
   font-style: normal;
+}
+
+.pageMast.stacked h1 {
+  white-space: normal;
+}
+
+.pageMast.stacked h1 em {
+  display: block;
 }
 
 .pageMastTrailing {
@@ -433,7 +448,7 @@ button {
 
 .pageStat {
   display: grid;
-  min-height: 42px;
+  height: 44px;
   place-items: center end;
   align-content: center;
   border: 1px solid var(--glass-border);
@@ -457,8 +472,8 @@ button {
 .pageCount,
 .pageIconButton {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid var(--glass-border);
   border-radius: 50%;
@@ -677,6 +692,45 @@ button {
   text-transform: uppercase;
 }
 
+.themeHeadingActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.themeHeadingActions > span {
+  flex: none;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: oklch(1 0 0 / 0.06);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.themeGenerateButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 13px 0 11px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: 0 7px 22px rgba(var(--accent-rgb), 0.22), inset 0 1px oklch(1 0 0 / 0.4);
+  font-size: 12px;
+  font-weight: 850;
+  transition-property: transform, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.themeGenerateButton:active { transform: scale(0.96); }
+.themeGenerateButton svg { width: 16px; height: 16px; }
+
 .themeCard {
   position: relative;
   display: grid;
@@ -734,6 +788,61 @@ button {
 .themeCheck { color: var(--accent-ink); background: var(--accent); box-shadow: 0 5px 14px rgba(var(--accent-rgb), 0.28); font-size: 12px; font-weight: 900; opacity: 0; filter: blur(4px); scale: 0.25; }
 .themeCard.active .themeDot { opacity: 0; filter: blur(4px); scale: 0.25; }
 .themeCard.active .themeCheck { opacity: 1; filter: blur(0); scale: 1; }
+
+.themeGeneratorModal form { gap: 16px; }
+
+.generatorThemePreview {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 24px;
+  background: oklch(1 0 0 / 0.045);
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.1), inset 0 1px oklch(1 0 0 / 0.08);
+}
+
+.generatorThemePreview .themePreview { width: 112px; height: 78px; border-radius: 14px; }
+.generatorThemePreview > div:nth-child(2) { display: grid; min-width: 0; gap: 3px; }
+.generatorThemePreview strong { overflow: hidden; color: var(--heading); text-overflow: ellipsis; white-space: nowrap; }
+.generatorThemePreview small { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+
+.generatorPalette {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.generatorPalette i {
+  height: 12px;
+  border-radius: 999px;
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+.themeGeneratorModal .secondaryButton {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text);
+  background: var(--glass-thin-bg);
+  transition-property: transform, background-color;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.themeGeneratorModal .secondaryButton:active { transform: scale(0.96); }
+.themeGeneratorModal .secondaryButton svg { width: 16px; height: 16px; }
+
+@media (max-width: 430px) {
+  .themeHeadingActions > span { display: none; }
+  .themeGenerateButton { padding-inline: 10px 12px; }
+  .generatorThemePreview { grid-template-columns: 92px minmax(0, 1fr); }
+  .generatorThemePreview .themePreview { width: 92px; }
+}
 
 /* Theme layer keeps the existing ledger components coherent without duplicating them. */
 body { color: var(--text); background: var(--bg); transition: background-color 700ms ease, color 700ms ease; }
@@ -857,6 +966,7 @@ h1 span {
 .meterGroup {
   display: grid;
   gap: 14px;
+  overflow: clip;
   border: 1px solid var(--glass-border);
   border-radius: 28px;
   padding: 18px;
@@ -878,19 +988,6 @@ h1 span {
   gap: 18px;
 }
 
-.meterGroupHead div {
-  display: grid;
-  gap: 4px;
-}
-
-.meterGroupHead p {
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .meterGroupHead h2 {
   color: var(--heading);
   font-family: var(--font-display);
@@ -898,15 +995,6 @@ h1 span {
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.1;
-}
-
-.meterGroupHead > span {
-  max-width: 29ch;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-  text-align: end;
-  text-wrap: pretty;
 }
 
 .meterPair {
@@ -989,20 +1077,6 @@ h1 span {
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.meterCardTop i {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.meterCard.active .meterCardTop i {
-  color: var(--accent);
 }
 
 .meterReading {
@@ -1498,27 +1572,31 @@ button:disabled {
 
 .search {
   display: block;
-  width: min(190px, 48vw);
+  width: 100%;
 }
 
 .searchInputField {
-  height: 38px;
+  height: 44px;
+  background: color-mix(in oklch, var(--surface-solid), transparent 28%);
+  transition-property: border-color, box-shadow, transform, background-color;
+  transition-duration: 240ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.searchInputField[data-state="focused"] {
+  border-color: color-mix(in oklch, var(--accent), transparent 42%);
+  background: color-mix(in oklch, var(--surface-solid), transparent 8%);
+  box-shadow: 0 10px 28px rgba(var(--accent-rgb), 0.13), inset 0 1px rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
 }
 
 .search input {
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .collectionHead {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 16px;
+  display: block;
   margin-bottom: 5px;
-}
-
-.collectionHead .eyebrow {
-  margin-bottom: 4px;
 }
 
 .categoryFilters {
@@ -2086,7 +2164,68 @@ button.ledgerCard:active {
   border-radius: 17px;
 }
 
+@media (max-width: 900px) {
+  :root {
+    --mast-title-size: clamp(36px, 5vw, 48px);
+  }
+}
+
 @media (max-width: 520px) {
+  :root {
+    --mast-title-size: clamp(27px, 8vw, 34px);
+  }
+
+  .appShell {
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .appNavigation {
+    width: calc(100% - 24px);
+    max-width: 320px;
+  }
+
+  .appNavigationDock {
+    gap: 2px;
+    padding-inline: 6px;
+  }
+
+  .appNavigationDock button {
+    width: auto !important;
+    min-width: 44px;
+    height: 44px !important;
+    flex: 1 1 0;
+  }
+
+  .purchaseFab {
+    right: 18px;
+    width: 50px;
+    min-height: 50px;
+  }
+
+  .purchaseFab svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .categoryFilters {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .pageMast {
+    min-height: 72px;
+    padding-top: 16px;
+  }
+
+  .pageMast.stacked {
+    min-height: 96px;
+  }
+
+  .pageMast h1 {
+    line-height: 1;
+  }
+
   .ledgerCard.ledgerCard {
     border-radius: 22px;
   }
@@ -2106,34 +2245,92 @@ button.ledgerCard:active {
 
   .meterGroup {
     border-radius: 24px;
-    padding: 16px;
-  }
-
-  .meterGroupHead {
-    gap: 12px;
-  }
-
-  .meterGroupHead > span {
-    max-width: 19ch;
+    gap: 10px;
+    padding: 12px;
   }
 
   .meterCard {
     min-width: 0;
-    padding: 15px;
+    min-height: 108px;
+    gap: 7px;
+    padding: 12px;
+  }
+
+  .meterCard strong {
+    font-size: 32px;
+  }
+
+  .meterCard strong small,
+  .meterReading {
+    font-size: 10px;
+  }
+
+  .meterCardTop > span {
+    font-size: 12px;
   }
 
   .meterCardTop > span {
     color: var(--text);
   }
 
-  .currentMeters {
-    grid-template-columns: 1fr;
-  }
-
   .meterInstall {
-    min-height: 84px;
+    min-height: 108px;
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 6px;
+    padding: 12px;
   }
 
+  .meterInstall .installSignal {
+    display: none;
+  }
+
+  .meterInstall .installBadge {
+    justify-self: start;
+    padding: 5px 7px;
+  }
+
+  .pageMast .pageHeaderActions {
+    gap: 5px;
+  }
+
+  .pageMast .pageIconButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .pageMast .pageStat {
+    height: 44px;
+    padding: 5px 14px;
+  }
+
+}
+
+@media (max-width: 360px) {
+  :root {
+    --mast-title-size: 26px;
+  }
+
+  .pageMastTitleRow,
+  .timeMast {
+    gap: 10px;
+  }
+}
+
+@media (min-width: 521px) {
+  .search input {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchInputField {
+    transition-duration: 0.01ms;
+  }
+
+  .searchInputField[data-state="focused"] {
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {

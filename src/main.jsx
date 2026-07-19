@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Limelight } from "@getlimelight/sdk";
-import { Archive, CalendarDays, History, Home as HomeNavIcon, NotebookPen, Pencil, Settings, Timer, Trash2, Users, Zap } from "lucide-react";
+import { Archive, CalendarDays, History, Home as HomeNavIcon, NotebookPen, Pencil, RefreshCw, Search, Settings, Sparkles, Timer, Trash2, Users, Zap } from "lucide-react";
 import { AnimatedToastStack, useAnimatedToastStack } from "@/components/motion/animated-toast-stack";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Dock, DockItem } from "@/components/motion/dock";
@@ -17,6 +17,7 @@ import { ShaderBackground } from "./components/motion/shader-background";
 import { bandFor } from "./electricity.js";
 import { supabase } from "./supabase";
 import { TimeTracker } from "./time-tracker";
+import { createRandomTheme, generatedThemeTokens } from "./theme-generator";
 import "./styles.css";
 
 const Silk = lazy(() => import("./components/motion/silk"));
@@ -26,7 +27,7 @@ Limelight.connect();
 const defaultMeters = ["old-modern", "old-classic", "new - 1"];
 const renamedMeters = { "Main meter": "old-modern", "Upstairs meter": "old-classic", "Backup meter": "new - 1" };
 const meterName = (name) => renamedMeters[name] ?? name;
-const meterLabel = (name) => ({ "old-modern": "Old modern", "old-classic": "Old classic", "new - 1": "New meter 1" })[name] ?? name;
+const meterLabel = (name) => ({ "old-modern": "Modern meter", "old-classic": "Classic meter", "new - 1": "New meter 1" })[name] ?? name;
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
@@ -52,6 +53,18 @@ const themes = [
   { id: "lagoon", name: "Lagoon", note: "Deep sea & aqua", colors: ["oklch(0.145 0.025 195)", "oklch(0.77 0.105 190)"], shaderColors: ["#000d0d", "#55cac3"] },
   { id: "quartz", name: "Quartz", note: "Graphite & champagne", colors: ["oklch(0.15 0.008 85)", "oklch(0.82 0.055 85)"], shaderColors: ["#0d0b08", "#d5c29c"] },
 ];
+const loadThemes = () => {
+  try {
+    const savedThemes = JSON.parse(localStorage.getItem("ledger-custom-themes") ?? "{}");
+    return themes.map((item) => {
+      const saved = savedThemes[item.id];
+      if (!saved?.custom || !saved?.style || typeof saved.name !== "string") return item;
+      return saved.version === 3 ? { ...item, ...saved, id: item.id } : createRandomTheme({ id: item.id, name: saved.name });
+    });
+  } catch {
+    return themes;
+  }
+};
 const backgrounds = [
   { id: "mesh", name: "Mesh", note: "Soft and fluid" },
   { id: "silk", name: "Silk", note: "Woven light" },
@@ -87,6 +100,7 @@ const formatRecentDate = (value, now = new Date()) => {
 function App() {
   const { toasts, showToast, updateToast, dismissToast } = useAnimatedToastStack({ limit: 4 });
   const [screen, setScreen] = useState("home");
+  const [themeOptions, setThemeOptions] = useState(loadThemes);
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem("ledger-theme");
     return themes.some(({ id }) => id === savedTheme) ? savedTheme : "ledger";
@@ -119,9 +133,17 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const selectedTheme = themeOptions.find(({ id }) => id === theme);
+    generatedThemeTokens.forEach((token) => document.documentElement.style.removeProperty(token));
+    if (selectedTheme?.style) Object.entries(selectedTheme.style).forEach(([token, value]) => document.documentElement.style.setProperty(token, value));
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("ledger-theme", theme);
-  }, [theme]);
+  }, [theme, themeOptions]);
+
+  useEffect(() => {
+    const customThemes = Object.fromEntries(themeOptions.filter(({ custom }) => custom).map((item) => [item.id, item]));
+    localStorage.setItem("ledger-custom-themes", JSON.stringify(customThemes));
+  }, [themeOptions]);
 
   useEffect(() => {
     localStorage.setItem("ledger-background", background);
@@ -343,7 +365,7 @@ function App() {
 
   return (
     <>
-    <AppBackground background={background} theme={theme} />
+    <AppBackground background={background} theme={theme} themes={themeOptions} />
     <AnimatedToastStack toasts={toasts} onDismiss={dismissToast} position="top-center" fixed maxVisible={3} className="pt-[env(safe-area-inset-top)]" />
     <main className={`appShell${screen === "time" ? " timeMode" : ""}`}>
       {screen === "home" ? <Home meters={meters} purchases={purchases} onNavigate={setScreen} /> : screen === "time" ? <TimeTracker showToast={showToast} updateToast={updateToast} /> : screen === "readings" ? <Readings readings={readings} busy={clearBusy} message={message} onBack={() => setScreen("electricity")} onClear={clearReadings} /> : screen === "purchases" ? <Purchases
@@ -362,9 +384,8 @@ function App() {
         onEdit={editPurchase}
         onCancelEdit={cancelPurchaseEdit}
         onDelete={deletePurchase}
-      /> : screen === "appearance" ? <More theme={theme} background={background} onThemeChange={setTheme} onBackgroundChange={setBackground} /> : screen === "notes" ? <MiniAppPlaceholder eyebrow="Tracking" title="Personal notes" note="A private place for quick thoughts, lists, and things worth remembering." icon={<NotebookPen />} /> : screen === "teams" ? <MiniAppPlaceholder eyebrow="Settings" title="Teams" note="Your shared spaces and team access will live here." icon={<Users />} /> : <>
+      /> : screen === "appearance" ? <More themes={themeOptions} theme={theme} background={background} onThemeChange={setTheme} onThemeGenerated={(nextTheme) => setThemeOptions((items) => items.map((item) => item.id === nextTheme.id ? nextTheme : item))} onBackgroundChange={setBackground} /> : screen === "notes" ? <MiniAppPlaceholder title="Personal notes" note="A private place for quick thoughts, lists, and things worth remembering." icon={<NotebookPen />} /> : screen === "teams" ? <MiniAppPlaceholder title="Teams" note="Your shared spaces and team access will live here." icon={<Users />} /> : <>
       <PageHeader
-        eyebrow="Electricity"
         trailing={<div className="pageHeaderActions">
           <button className="pageIconButton" type="button" aria-label="View meter history" title="Meter history" onClick={() => setScreen("readings")}><History /></button>
           <span className="pageStat"><strong><AppNumber value={activeUnits} /></strong> units</span>
@@ -384,12 +405,12 @@ function App() {
       </section>
 
       <section className="meterCabinet" aria-label="Electricity meters">
-        <MeterGroup eyebrow="Previous meters" title="Retired pair" note="Kept available for older readings.">
+        <MeterGroup title="Included meters">
           <div className="meterPair">
             {meters.filter((meter) => meter.name.startsWith("old-")).map((meter) => <MeterCard key={meter.name} meter={meter} activeMeter={activeMeter} onSelect={setActiveMeter} />)}
           </div>
         </MeterGroup>
-        <MeterGroup current eyebrow="Current supply" title="New meters" note="The active line and its planned replacement.">
+        <MeterGroup current title="New meters">
           <div className="meterPair currentMeters">
             {meters.filter((meter) => !meter.name.startsWith("old-")).map((meter) => <MeterCard key={meter.name} meter={meter} activeMeter={activeMeter} onSelect={setActiveMeter} />)}
             <article className="meterInstall" aria-label="New meter 2 installation status">
@@ -413,7 +434,7 @@ function App() {
           <div className="unitSliderField">
             <div className="readingValueFields">
               <Input label="Current reading" type="number" min={readingPrevious} max={readingMaximum} step="1" required autoFocus value={readingValue} onChange={setReadingValue} classNames={{ field: "currentReadingInputField", input: "currentReadingInput" }} />
-              <div className="previousReading"><span>Previous reading</span><output>{readingPrevious}</output></div>
+              <div className="previousReading"><span>Last reading</span><output>{readingPrevious}</output></div>
             </div>
             <div className="unitSliderValue" data-band={bandFor(selectedUnits)}><span>Units used</span><strong>{selectedUnits}</strong></div>
             <RangeSlider value={selectedUnits} onValueChange={(units) => setReadingValue(String(readingPrevious + units))} min={0} max={200} step={1} tickStep={10} haptic disabled={busy} aria-label="Electricity units used" />
@@ -452,9 +473,9 @@ function AppNavigation({ screen, onNavigate }) {
   </nav>;
 }
 
-function MiniAppPlaceholder({ eyebrow, title, note, icon }) {
+function MiniAppPlaceholder({ title, note, icon }) {
   return <>
-    <PageHeader eyebrow={eyebrow} note={note}>{title}<em>.</em></PageHeader>
+    <PageHeader note={note}>{title}<em>.</em></PageHeader>
     <section className="ledgerCard miniAppEmpty">
       <span>{icon}</span>
       <p>This mini app is ready for its next feature.</p>
@@ -462,12 +483,13 @@ function MiniAppPlaceholder({ eyebrow, title, note, icon }) {
   </>;
 }
 
-function AppBackground({ background, theme }) {
-  const [base, accent] = themes.find(({ id }) => id === theme)?.shaderColors ?? themes[0].shaderColors;
+function AppBackground({ background, theme, themes: themeOptions }) {
+  const currentTheme = themeOptions.find(({ id }) => id === theme) ?? themeOptions[0];
+  const [base, accent] = currentTheme.shaderColors;
   if (background === "silk") return <div className="shaderBackdrop" aria-hidden="true">
     <Suspense fallback={null}><Silk key={theme} speed={5} scale={1} color={accent} noiseIntensity={1.5} rotation={0} /></Suspense>
   </div>;
-  const veilHue = { ledger: 35, ruby: -45, tide: 75, iris: 0, slate: 15, sienna: -25, lagoon: 45, quartz: 55 }[theme] ?? 0;
+  const veilHue = currentTheme.veilHue ?? { ledger: 35, ruby: -45, tide: 75, iris: 0, slate: 15, sienna: -25, lagoon: 45, quartz: 55 }[theme] ?? 0;
   if (background === "veil") return <div className="shaderBackdrop" aria-hidden="true">
     <DarkVeil key={`${theme}-${background}`} hueShift={veilHue} noiseIntensity={0.025} speed={0.22} warpAmount={0.18} resolutionScale={0.8} />
   </div>;
@@ -498,11 +520,10 @@ function ReadingRow({ reading }) {
   </article>;
 }
 
-function MeterGroup({ eyebrow, title, note, current = false, children }) {
+function MeterGroup({ title, current = false, children }) {
   return <section className={`meterGroup${current ? " current" : ""}`}>
     <header className="meterGroupHead">
-      <div><p>{eyebrow}</p><h2>{title}</h2></div>
-      <span>{note}</span>
+      <h2>{title}</h2>
     </header>
     {children}
   </section>;
@@ -516,21 +537,20 @@ function MeterCard({ meter, activeMeter, onSelect }) {
     aria-pressed={active}
     onClick={() => onSelect(meter.name)}
   >
-    <span className="meterCardTop"><span>{meterLabel(meter.name)}</span><i>{active ? "Selected" : "Meter"}</i></span>
+    <span className="meterCardTop"><span>{meterLabel(meter.name)}</span></span>
     <strong>{meter.latest ? meter.units : "—"}<small> units</small></strong>
     <span className="meterReading">{meter.latest ? `${meter.latest.current_reading} current reading` : "No reading yet"}</span>
   </button>;
 
   return active
-    ? <ElectricBorder color="var(--accent)" speed={0.7} chaos={0.1} borderRadius={18} className="meterElectricBorder">{card}</ElectricBorder>
+    ? <ElectricBorder color="var(--accent)" speed={0.7} chaos={0.08} borderRadius={18} className="meterElectricBorder">{card}</ElectricBorder>
     : card;
 }
 
-function PageHeader({ eyebrow, children, note, leading, trailing }) {
-  return <header className={`pageMast${leading ? " hasLeading" : ""}`}>
+function PageHeader({ children, note, leading, trailing, stacked = false }) {
+  return <header className={`pageMast${leading ? " hasLeading" : ""}${stacked ? " stacked" : ""}`}>
     {leading}
     <div className="pageMastCopy">
-      <p className="eyebrow">{eyebrow}</p>
       <div className="pageMastTitleRow">
         <h1>{children}</h1>
         {trailing ? <div className="pageMastTrailing">{trailing}</div> : null}
@@ -543,7 +563,6 @@ function PageHeader({ eyebrow, children, note, leading, trailing }) {
 function Readings({ readings, busy, message, onBack, onClear }) {
   return <>
     <PageHeader
-      eyebrow="Meter ledger"
       leading={<button className="pageIconButton" type="button" onClick={onBack} aria-label="Back to meters">←</button>}
       trailing={<span className="pageCount"><AppNumber value={readings.length} /></span>}
     >
@@ -583,7 +602,7 @@ function MoreIcon() {
 function Home({ meters, purchases, onNavigate }) {
   const totalUnits = meters.reduce((sum, meter) => sum + meter.units, 0);
   return <>
-    <PageHeader eyebrow="Personal ledger">Everything, <em>accounted for.</em></PageHeader>
+    <PageHeader stacked>Everything, <em>accounted for.</em></PageHeader>
     <section className="homeGrid" aria-label="Ledger overview">
       <button className="ledgerCard timeOverview" type="button" onClick={() => onNavigate("time")}>
         <span className="overviewIcon"><TimeIcon /></span><small>Workday</small><strong><AppNumber value={800} format={formatWorkdayTarget} /></strong><span>weekday time target</span>
@@ -598,9 +617,35 @@ function Home({ meters, purchases, onNavigate }) {
   </>;
 }
 
-function More({ theme, background, onThemeChange, onBackgroundChange }) {
+function More({ themes, theme, background, onThemeChange, onThemeGenerated, onBackgroundChange }) {
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [slotId, setSlotId] = useState(theme);
+  const [themeName, setThemeName] = useState(themes.find(({ id }) => id === theme)?.name ?? "New theme");
+  const [draft, setDraft] = useState(() => createRandomTheme({ id: theme, name: "New theme" }));
+  const openGenerator = () => {
+    const item = themes.find(({ id }) => id === theme) ?? themes[0];
+    setSlotId(item.id);
+    setThemeName(item.name);
+    setDraft(createRandomTheme(item));
+    setGeneratorOpen(true);
+  };
+  const chooseSlot = (nextId) => {
+    const item = themes.find(({ id }) => id === nextId) ?? themes[0];
+    setSlotId(item.id);
+    setThemeName(item.name);
+    setDraft(createRandomTheme(item));
+  };
+  const randomize = () => setDraft(createRandomTheme({ id: slotId, name: themeName.trim() || "New theme" }));
+  const saveTheme = (event) => {
+    event.preventDefault();
+    const nextTheme = { ...draft, id: slotId, name: themeName.trim() || "New theme" };
+    onThemeGenerated(nextTheme);
+    onThemeChange(slotId);
+    setGeneratorOpen(false);
+  };
+
   return <section className="morePanel">
-    <PageHeader eyebrow="Appearance" note="Choose a background and finish for your personal ledger.">Set the <em>mood.</em></PageHeader>
+    <PageHeader note="Choose a background and finish for your personal ledger.">Set the <em>mood.</em></PageHeader>
     <div className="themeHeading"><div><p className="eyebrow">Background</p><h2>Choose your motion</h2></div><span><AppNumber value={backgrounds.length} /> styles</span></div>
     <div className="backgroundGrid" role="radiogroup" aria-label="App background">
       {backgrounds.map((item) => <button className={`ledgerCard backgroundCard ${item.id}${background === item.id ? " active" : ""}`} type="button" role="radio" aria-checked={background === item.id} key={item.id} onClick={() => onBackgroundChange(item.id)}>
@@ -609,7 +654,7 @@ function More({ theme, background, onThemeChange, onBackgroundChange }) {
         <span className="themeState" aria-hidden="true"><i className="themeDot" /><i className="themeCheck">✓</i></span>
       </button>)}
     </div>
-    <div className="themeHeading"><div><p className="eyebrow">Theme library</p><h2>Pick your atmosphere</h2></div><span><AppNumber value={themes.length} /> finishes</span></div>
+    <div className="themeHeading"><div><p className="eyebrow">Theme library</p><h2>Pick your atmosphere</h2></div><div className="themeHeadingActions"><span><AppNumber value={themes.length} /> finishes</span><button className="themeGenerateButton" type="button" onClick={openGenerator}><Sparkles aria-hidden="true" /> Generate</button></div></div>
     <div className="themeGrid" role="radiogroup" aria-label="App theme">
       {themes.map((item) => <button className={`ledgerCard themeCard${theme === item.id ? " active" : ""}`} type="button" role="radio" aria-checked={theme === item.id} aria-label={`${item.name}: ${item.note}`} key={item.id} onClick={() => onThemeChange(item.id)}>
         <span className="themePreview" style={{ "--swatch-bg": item.colors[0], "--swatch-accent": item.colors[1] }}><i /><i /><i /></span>
@@ -617,6 +662,22 @@ function More({ theme, background, onThemeChange, onBackgroundChange }) {
         <span className="themeState" aria-hidden="true"><i className="themeDot" /><i className="themeCheck">✓</i></span>
       </button>)}
     </div>
+    <MorphingModal viewId={generatorOpen ? "theme-generator" : null} onClose={() => setGeneratorOpen(false)} placement="center" ariaLabel="Generate a random theme" className="ledgerMorphingModal themeGeneratorModal max-w-md">
+      <div className="morphingModalHeader">
+        <div><h2>Generate a theme</h2><p>Replace any finish with a fresh two-color pairing.</p></div>
+        <button type="button" aria-label="Close theme generator" onClick={() => setGeneratorOpen(false)}>×</button>
+      </div>
+      <form onSubmit={saveTheme}>
+        <label>Theme to replace<select value={slotId} onChange={(event) => chooseSlot(event.target.value)}>{themes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <Input label="Theme name" value={themeName} onChange={setThemeName} maxLength={24} required autoFocus />
+        <div className="generatorThemePreview" aria-live="polite" style={{ "--swatch-bg": draft.colors[0], "--swatch-accent": draft.colors[1] }}>
+          <span className="themePreview" aria-hidden="true"><i /><i /><i /></span>
+          <div><strong>{themeName.trim() || "New theme"}</strong><small>{draft.note}</small></div>
+          <div className="generatorPalette" aria-label="Generated color pairing">{draft.colors.map((color) => <i key={color} style={{ background: color }} />)}</div>
+        </div>
+        <div className="purchaseFormActions"><button type="submit">Save theme</button><button className="secondaryButton" type="button" onClick={randomize}><RefreshCw aria-hidden="true" /> Try another</button></div>
+      </form>
+    </MorphingModal>
   </section>;
 }
 
@@ -639,15 +700,14 @@ function Purchases({ purchases, loading, form, query, busy, message, editingPurc
   };
   return <>
     <PageHeader
-      eyebrow="Purchase ledger"
       note={purchases.length ? <><AppNumber value={total} format={formatCurrency} /> across your collection</> : "Your considered collection starts here"}
       trailing={<span className="pageCount"><AppNumber value={purchases.length} /></span>}
     >
-      Your <em>purchases.</em>
+      Your <em>stash.</em>
     </PageHeader>
 
     <section className="history purchaseHistory" aria-label="Purchase history">
-      <div className="collectionHead"><div><p className="eyebrow">Inventory</p><h2>Collection</h2></div><Input className="search" type="search" aria-label="Search purchases" placeholder="Find an item" value={query} onChange={setQuery} classNames={{ field: "searchInputField" }} /></div>
+      <div className="collectionHead"><Input className="search" type="search" aria-label="Search your stash" placeholder="Find an item" value={query} onChange={setQuery} leftIcon={<Search />} classNames={{ field: "searchInputField" }} /></div>
       <div className="categoryFilters" aria-label="Filter by category">{categories.map((item) => <button className={item === category ? "active" : ""} type="button" key={item} aria-pressed={item === category} onClick={() => setCategory(item)}>{item}</button>)}</div>
       {message && !modalOpen && <p className="message" aria-live="polite">{message}</p>}
       {loading ? <Loader variant="dots" size={18} label="Loading purchases" className="emptyState text-primary" /> : matching.length ? <div className="purchaseCards">{matching.map((purchase) => <article className="ledgerCard purchaseCard" key={purchase.id}>

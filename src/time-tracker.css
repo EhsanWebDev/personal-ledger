@@ -18,7 +18,7 @@
 
 .timeMast {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
   padding: 20px 0 8px;
@@ -28,22 +28,22 @@
   margin: 0;
   color: var(--time-heading);
   font-family: var(--time-font-display);
-  font-size: clamp(44px, 9vw, 64px);
+  font-size: var(--mast-title-size);
   font-weight: 600;
   letter-spacing: -0.045em;
   line-height: 0.95;
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
 .timeMast h1 br { display: none; }
-.timeMast h1 em { color: var(--time-accent); font-style: normal; }
+.timeMast h1 em { display: inline; color: var(--time-accent); font-style: normal; }
 
 .timeMastActions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 
 .timeIconButton {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid var(--time-line);
@@ -59,7 +59,7 @@
 .timeIconButton:active { transform: scale(0.96); }
 .timeIconButton svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
-.historyMast { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; }
+.historyMast { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; }
 .historyMast > span { color: var(--time-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 .timeEyebrow {
@@ -73,8 +73,8 @@
 
 .statusPill {
   display: inline-flex;
+  height: 44px;
   flex: 0 0 auto;
-  min-height: 36px;
   align-items: center;
   gap: 8px;
   border: 1px solid var(--time-line);
@@ -313,9 +313,7 @@
 }
 
 @media (max-width: 520px) {
-  .timeMast { align-items: start; }
-  .timeMast h1 { max-width: 250px; font-size: clamp(40px, 12vw, 54px); }
-  .timeMastActions { margin-top: 4px; }
+  .timeMast h1 { line-height: 1; }
   .statusPill { padding-inline: 11px; }
   .bezel { border-radius: 27px; padding: 4px; }
   .timerCore,
