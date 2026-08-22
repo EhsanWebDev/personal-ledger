@@ -136,10 +136,12 @@ export function RangeSlider({
         disabled ? "pointer-events-none opacity-50" : "cursor-grab active:cursor-grabbing",
         className
       )}>
-      {/* fill — runs from the left edge to the thumb, consistent tone */}
+      {/* fill — runs from the left edge to the thumb. --slider-fill lets the
+          host tint it (the meter form colours it by consumption band); without
+          one it stays the original flat wash. */}
       <motion.div
-        className="absolute inset-y-0 left-0 bg-foreground/15"
-        style={{ width: left }} />
+        className="absolute inset-y-0 left-0"
+        style={{ width: left, background: "var(--slider-fill, color-mix(in oklab, currentColor, transparent 85%))" }} />
       {/* ticks — slight inset so the end dots don't clip */}
       <div className="pointer-events-none absolute inset-x-2 inset-y-0">
         {ticks.map((t) => {

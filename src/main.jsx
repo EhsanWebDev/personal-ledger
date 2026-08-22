@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Limelight } from "@getlimelight/sdk";
-import { Archive, CalendarDays, History, Home as HomeNavIcon, NotebookPen, Pencil, RefreshCw, Search, Settings, Sparkles, Timer, Trash2, Users, Zap } from "lucide-react";
+import { Archive, CalendarDays, ChevronDown, History, Home as HomeNavIcon, NotebookPen, Pencil, RefreshCw, RotateCcw, Search, Settings, Sparkles, Timer, Trash2, Users, Zap } from "lucide-react";
 import { AnimatedToastStack, useAnimatedToastStack } from "@/components/motion/animated-toast-stack";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Dock, DockItem } from "@/components/motion/dock";
@@ -14,30 +14,32 @@ import DarkVeil from "@/components/DarkVeil";
 import { Aurora } from "@/components/motion/aurora";
 import { SideRays } from "@/components/motion/side-rays";
 import { ShaderBackground } from "./components/motion/shader-background";
-import { bandFor } from "./electricity.js";
+import { bandFor, cycleDays, cyclesFor, isUnusedCycle, readingDeltas, unitsFor, unitsPerDay } from "./electricity.js";
 import { supabase } from "./supabase";
 import { TimeTracker } from "./time-tracker";
-import { createRandomTheme, generatedThemeTokens } from "./theme-generator";
+import { createRandomTheme, createThemeVariants, generatedThemeTokens } from "./theme-generator";
 import "./styles.css";
 
 const Silk = lazy(() => import("./components/motion/silk"));
 
 Limelight.connect();
 
-const defaultMeters = ["old-modern", "old-classic", "new - 1"];
+const defaultMeters = ["old-modern", "old-classic", "new - 1", "sim-meter"];
 const renamedMeters = { "Main meter": "old-modern", "Upstairs meter": "old-classic", "Backup meter": "new - 1" };
 const meterName = (name) => renamedMeters[name] ?? name;
-const meterLabel = (name) => ({ "old-modern": "Modern meter", "old-classic": "Classic meter", "new - 1": "New meter 1" })[name] ?? name;
+const meterLabel = (name) => ({ "old-modern": "Modern meter", "old-classic": "Classic meter", "new - 1": "New meter 1", "sim-meter": "Sim meter" })[name] ?? name;
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
-const unitsFor = (current, previous) => Math.max(0, Number(current || 0) - Number(previous || 0));
+const formatCycleDate = (value) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "");
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const purchaseCategories = ["Mobile", "Laptop", "PC", "TWS earbuds", "Smartwatch", "Tablet", "Camera", "Gaming"];
 const currency = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
 const formatCurrency = (value) => currency.format(value);
 const formatWorkdayTarget = () => "8:00";
+const SLAB_LIMIT = 200;
+const GAUGE_MAX = 220;
 
 function AppNumber({ value, ...props }) {
   return <NumberTicker value={Number(value) || 0} duration={0.55} {...props} />;
@@ -59,7 +61,7 @@ const loadThemes = () => {
     return themes.map((item) => {
       const saved = savedThemes[item.id];
       if (!saved?.custom || !saved?.style || typeof saved.name !== "string") return item;
-      return saved.version === 3 ? { ...item, ...saved, id: item.id } : createRandomTheme({ id: item.id, name: saved.name });
+      return saved.version === 4 ? { ...item, ...saved, id: item.id } : createRandomTheme({ id: item.id, name: saved.name });
     });
   } catch {
     return themes;
@@ -82,13 +84,19 @@ const navigationItems = [
   { id: "stash", label: "Personal stash", screen: "purchases", icon: Archive },
   { id: "settings", label: "Settings", screen: "appearance", icon: Settings },
 ];
-const formatRecentDate = (value, now = new Date()) => {
+const relativeDay = (value, now = new Date()) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
   const diffHours = Math.floor((now - date) / 36e5);
   const diffDays = Math.floor(diffHours / 24);
-  const relative = diffHours < 24 ? `${Math.max(1, diffHours)}hr ago` : diffDays === 1 ? "yesterday" : `${diffDays} days ago`;
+  return diffHours < 24 ? `${Math.max(1, diffHours)}hr ago` : diffDays === 1 ? "yesterday" : `${diffDays} days ago`;
+};
+const formatRecentDate = (value, now = new Date()) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const relative = relativeDay(value, now);
   const hours = date.getHours() % 12 || 12;
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const ampm = date.getHours() < 12 ? "AM" : "PM";
@@ -118,6 +126,9 @@ function App() {
   const [clearBusy, setClearBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [readingModalOpen, setReadingModalOpen] = useState(false);
+  const [cycleForm, setCycleForm] = useState({ current_reading: "", reading_date: today() });
+  const [cycleBusy, setCycleBusy] = useState(false);
+  const [cycleModalOpen, setCycleModalOpen] = useState(false);
   const [purchases, setPurchases] = useState([]);
   const [purchasesLoading, setPurchasesLoading] = useState(true);
   const [purchaseForm, setPurchaseForm] = useState({ item_name: "", category: "", purchase_price: "", purchase_date: today() });
@@ -152,20 +163,22 @@ function App() {
   const meters = useMemo(() => {
     const names = [...new Set([...defaultMeters, ...readings.map((reading) => reading.meter_name)])];
     return names.map((name) => {
-      const latest = readings.find((reading) => reading.meter_name === name);
-      const units = latest ? unitsFor(latest.current_reading, latest.previous_reading) : 0;
-      return { name, latest, units, band: latest ? bandFor(units) : "empty" };
+      const cycles = cyclesFor(readings.filter((reading) => reading.meter_name === name));
+      const cycle = cycles.find(({ live }) => live);
+      const units = cycle?.units ?? 0;
+      return { name, cycles, cycle, latest: cycle?.latest ?? null, units, band: cycle ? bandFor(units) : "empty" };
     });
   }, [readings]);
 
   const activeMeterData = meters.find((meter) => meter.name === activeMeter);
-  const activeLatest = activeMeterData?.latest;
+  const activeCycle = activeMeterData?.cycle;
   const activeUnits = activeMeterData?.units ?? 0;
-  const readingPrevious = Number(activeLatest?.previous_reading ?? 0);
-  const readingCurrent = Number(activeLatest?.current_reading ?? readingPrevious);
-  const readingMaximum = readingPrevious + 200;
+  const readingPrevious = Number(activeCycle?.startReading ?? 0);
+  const readingCurrent = Number(activeCycle?.latest?.current_reading ?? readingPrevious);
+  const cycleStart = activeCycle?.startDate ?? today();
+  const cycleLength = cycleDays(cycleStart, today());
   const sliderValue = Number(readingValue);
-  const selectedUnits = Number.isFinite(sliderValue) ? Math.min(200, unitsFor(sliderValue, readingPrevious)) : 0;
+  const selectedUnits = Number.isFinite(sliderValue) ? unitsFor(sliderValue, readingPrevious) : 0;
 
   useEffect(() => {
     setReadingValue(String(readingCurrent));
@@ -176,7 +189,7 @@ function App() {
 
     const { data, error } = await supabase
       .from("electricity_meter_readings")
-      .select("id,meter_name,current_reading,previous_reading,units,reading_date,created_at")
+      .select("id,meter_name,current_reading,previous_reading,units,reading_date,cycle_start_date,created_at")
       .order("reading_date", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -190,8 +203,8 @@ function App() {
     const previous = readingPrevious;
     const current = Number(readingValue);
 
-    if (!Number.isInteger(current) || current < readingPrevious || current > readingMaximum) {
-      setMessage(`Current reading must be a whole number from ${readingPrevious} to ${readingMaximum}.`);
+    if (!Number.isInteger(current) || current < readingPrevious) {
+      setMessage(`Current reading must be a whole number of ${readingPrevious} or more.`);
       return;
     }
 
@@ -208,6 +221,7 @@ function App() {
       current_reading: current,
       previous_reading: previous,
       reading_date: today(),
+      cycle_start_date: cycleStart,
     });
     setBusy(false);
 
@@ -222,14 +236,56 @@ function App() {
     }
   }
 
+  function openCycleReset() {
+    setMessage("");
+    setCycleForm({ current_reading: String(readingCurrent), reading_date: today() });
+    setCycleModalOpen(true);
+  }
+
+  async function startCycle(event) {
+    event.preventDefault();
+    const baseline = Number(cycleForm.current_reading);
+    const startedOn = cycleForm.reading_date;
+
+    if (!Number.isInteger(baseline) || baseline < 0) {
+      setMessage("Billed reading must be a whole number.");
+      return;
+    }
+
+    const correcting = isUnusedCycle(activeCycle);
+    const toastId = showToast({
+      title: correcting ? "Updating cycle start…" : "Starting new cycle…",
+      description: `${meterLabel(activeMeter)} from ${baseline}`,
+      status: "loading",
+      duration: 0,
+      dismissible: false,
+    });
+    setCycleBusy(true);
+    const values = { meter_name: activeMeter, current_reading: baseline, previous_reading: baseline, reading_date: startedOn, cycle_start_date: startedOn };
+    const { error } = correcting
+      ? await supabase.from("electricity_meter_readings").update(values).eq("id", activeCycle.latest.id)
+      : await supabase.from("electricity_meter_readings").insert(values);
+    setCycleBusy(false);
+
+    if (error) {
+      setMessage(error.message);
+      updateToast(toastId, { title: "Could not start the cycle", description: error.message, status: "error", duration: 5200, dismissible: true });
+    } else {
+      setMessage(correcting ? "Cycle start updated." : "New billing cycle started.");
+      updateToast(toastId, { title: correcting ? "Cycle start updated" : "New cycle started", description: `${meterLabel(activeMeter)} counts from ${baseline} on ${formatCycleDate(startedOn)}.`, status: "success", icon: <RotateCcw />, duration: 4200, dismissible: true });
+      setCycleModalOpen(false);
+      loadReadings();
+    }
+  }
+
   async function clearReadings() {
-    if (!window.confirm("Clear all meter history and reset every meter to zero units?")) return;
+    if (!window.confirm("Delete every past cycle and restart all meters from their current reading?")) return;
 
     setClearBusy(true);
     setMessage("");
     const baselines = meters.map((meter) => {
       const current = Number(meter.latest?.current_reading ?? 0);
-      return { meter_name: meter.name, current_reading: current, previous_reading: current, reading_date: today() };
+      return { meter_name: meter.name, current_reading: current, previous_reading: current, reading_date: today(), cycle_start_date: today() };
     });
 
     try {
@@ -368,7 +424,7 @@ function App() {
     <AppBackground background={background} theme={theme} themes={themeOptions} />
     <AnimatedToastStack toasts={toasts} onDismiss={dismissToast} position="top-center" fixed maxVisible={3} className="pt-[env(safe-area-inset-top)]" />
     <main className={`appShell${screen === "time" ? " timeMode" : ""}`}>
-      {screen === "home" ? <Home meters={meters} purchases={purchases} onNavigate={setScreen} /> : screen === "time" ? <TimeTracker showToast={showToast} updateToast={updateToast} /> : screen === "readings" ? <Readings readings={readings} busy={clearBusy} message={message} onBack={() => setScreen("electricity")} onClear={clearReadings} /> : screen === "purchases" ? <Purchases
+      {screen === "home" ? <Home meters={meters} purchases={purchases} readings={readings} onNavigate={setScreen} /> : screen === "time" ? <TimeTracker showToast={showToast} updateToast={updateToast} /> : screen === "readings" ? <Readings meters={meters} readings={readings} busy={clearBusy} message={message} onBack={() => setScreen("electricity")} onClear={clearReadings} /> : screen === "purchases" ? <Purchases
         purchases={purchases}
         loading={purchasesLoading}
         form={purchaseForm}
@@ -387,6 +443,7 @@ function App() {
       /> : screen === "appearance" ? <More themes={themeOptions} theme={theme} background={background} onThemeChange={setTheme} onThemeGenerated={(nextTheme) => setThemeOptions((items) => items.map((item) => item.id === nextTheme.id ? nextTheme : item))} onBackgroundChange={setBackground} /> : screen === "notes" ? <MiniAppPlaceholder title="Personal notes" note="A private place for quick thoughts, lists, and things worth remembering." icon={<NotebookPen />} /> : screen === "teams" ? <MiniAppPlaceholder title="Teams" note="Your shared spaces and team access will live here." icon={<Users />} /> : <>
       <PageHeader
         trailing={<div className="pageHeaderActions">
+          <button className="pageIconButton" type="button" aria-label="Start a new billing cycle" title="New billing cycle" onClick={openCycleReset}><RotateCcw /></button>
           <button className="pageIconButton" type="button" aria-label="View meter history" title="Meter history" onClick={() => setScreen("readings")}><History /></button>
           <span className="pageStat"><strong><AppNumber value={activeUnits} /></strong> units</span>
         </div>}
@@ -394,14 +451,22 @@ function App() {
         Power <em>usage.</em>
       </PageHeader>
 
-      <section className="limitStrip" aria-label="Consumption limits">
-        <span>0</span>
-        <div>
-          <i style={{ "--fill": Math.min(1, activeUnits / 220) }} />
-          <b style={{ left: "86%" }}>190</b>
-          <b style={{ left: "91%" }}>200</b>
+      <p className="cycleStrip">
+        {activeCycle
+          ? <>From <strong>{activeCycle.startReading}</strong> on <strong>{formatCycleDate(activeCycle.startDate)}</strong> · <strong>{cycleLength}</strong> {cycleLength === 1 ? "day" : "days"} in{cycleLength ? <> · <strong>{unitsPerDay(activeUnits, cycleLength)}</strong> units a day</> : null}</>
+          : <>No cycle yet for {meterLabel(activeMeter)} — start one from the reading on your bill.</>}
+      </p>
+      {message && !readingModalOpen && !cycleModalOpen && <p className="message" aria-live="polite">{message}</p>}
+
+      <section className="limitGauge" data-band={bandFor(activeUnits)} aria-label="Slab headroom">
+        <div className="limitGaugeHead">
+          <span>{activeUnits < SLAB_LIMIT ? <><strong>{SLAB_LIMIT - activeUnits}</strong> units left before the {SLAB_LIMIT} slab</> : <><strong>{activeUnits - SLAB_LIMIT}</strong> units past the {SLAB_LIMIT} slab</>}</span>
+          <b>{activeUnits}<i>/{GAUGE_MAX}</i></b>
         </div>
-        <span>220</span>
+        <div className="limitGaugeTrack">
+          <i style={{ "--fill": Math.min(1, activeUnits / GAUGE_MAX) }} />
+          <b style={{ "--at": `${(SLAB_LIMIT / GAUGE_MAX) * 100}%` }}><span>{SLAB_LIMIT}</span></b>
+        </div>
       </section>
 
       <section className="meterCabinet" aria-label="Electricity meters">
@@ -413,11 +478,6 @@ function App() {
         <MeterGroup current title="New meters">
           <div className="meterPair currentMeters">
             {meters.filter((meter) => !meter.name.startsWith("old-")).map((meter) => <MeterCard key={meter.name} meter={meter} activeMeter={activeMeter} onSelect={setActiveMeter} />)}
-            <article className="meterInstall" aria-label="New meter 2 installation status">
-              <span className="installSignal" aria-hidden="true"><i /></span>
-              <div><strong>New meter 2</strong><small>Installing soon</small></div>
-              <span className="installBadge">Planned</span>
-            </article>
           </div>
         </MeterGroup>
       </section>
@@ -427,20 +487,37 @@ function App() {
       <button className="purchaseFab" type="button" aria-label="Update electricity units" onClick={() => { setMessage(""); setReadingValue(String(readingCurrent)); setReadingModalOpen(true); }}><PlusIcon /></button>
       <MorphingModal viewId={readingModalOpen ? "electricity-reading" : null} onClose={() => setReadingModalOpen(false)} placement="top" ariaLabel="Update electricity units" className="ledgerMorphingModal max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <div className="morphingModalHeader">
-          <div><h2>Update units</h2><p>{activeMeter}</p></div>
+          <div><h2>Update units</h2><p>{meterLabel(activeMeter)} · cycle started {formatCycleDate(cycleStart)}</p></div>
           <button type="button" aria-label="Close update units form" onClick={() => setReadingModalOpen(false)}>×</button>
         </div>
         <form onSubmit={saveReading}>
-          <div className="unitSliderField">
+          <div className="unitSliderField" data-band={bandFor(selectedUnits)}>
             <div className="readingValueFields">
-              <Input label="Current reading" type="number" min={readingPrevious} max={readingMaximum} step="1" required autoFocus value={readingValue} onChange={setReadingValue} classNames={{ field: "currentReadingInputField", input: "currentReadingInput" }} />
-              <div className="previousReading"><span>Last reading</span><output>{readingPrevious}</output></div>
+              <Input label="Current reading" type="number" min={readingPrevious} step="1" inputMode="numeric" required autoFocus value={readingValue} onChange={setReadingValue} classNames={{ field: "currentReadingInputField", input: "currentReadingInput" }} />
+              <div className="previousReading"><span>Counting from<button className="cycleChangeButton" type="button" disabled={busy} onClick={() => { setReadingModalOpen(false); openCycleReset(); }}>Change</button></span><output>{readingPrevious}</output></div>
             </div>
             <div className="unitSliderValue" data-band={bandFor(selectedUnits)}><span>Units used</span><strong>{selectedUnits}</strong></div>
-            <RangeSlider value={selectedUnits} onValueChange={(units) => setReadingValue(String(readingPrevious + units))} min={0} max={200} step={1} tickStep={10} haptic disabled={busy} aria-label="Electricity units used" />
+            <RangeSlider value={Math.min(200, selectedUnits)} onValueChange={(units) => setReadingValue(String(readingPrevious + units))} min={0} max={200} step={1} tickStep={10} haptic disabled={busy} aria-label="Electricity units used" />
             <div className="unitSliderLimits" aria-hidden="true"><span>0</span><span>200</span></div>
           </div>
           <div className="purchaseFormActions"><button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2">Updating <Loader variant="dots" size={14} label="Updating electricity units" /></span> : "Update units"}</button><button className="secondaryButton" type="button" disabled={busy} onClick={() => setReadingModalOpen(false)}>Cancel</button></div>
+          {message && <p className="message" aria-live="polite">{message}</p>}
+        </form>
+      </MorphingModal>
+      <MorphingModal viewId={cycleModalOpen ? "electricity-cycle" : null} onClose={() => setCycleModalOpen(false)} placement="top" ariaLabel="Start a new billing cycle" className="ledgerMorphingModal max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="morphingModalHeader">
+          <div><h2>New billing cycle</h2><p>{meterLabel(activeMeter)}</p></div>
+          <button type="button" aria-label="Close new billing cycle form" onClick={() => setCycleModalOpen(false)}>×</button>
+        </div>
+        <form onSubmit={startCycle}>
+          <div className="cycleResetField">
+            <Input label="Reading on your bill" type="number" min="0" step="1" inputMode="numeric" required autoFocus disabled={cycleBusy} value={cycleForm.current_reading} onChange={(current_reading) => setCycleForm({ ...cycleForm, current_reading })} classNames={{ field: "currentReadingInputField", input: "currentReadingInput" }} />
+            <Input label="Reading day" type="date" required max={today()} disabled={cycleBusy} value={cycleForm.reading_date} rightIcon={<CalendarDays />} classNames={{ rightIcon: "purchaseDateIcon" }} onChange={(reading_date) => setCycleForm({ ...cycleForm, reading_date })} />
+            <p className="cycleResetNote">{isUnusedCycle(activeCycle)
+              ? <>Nothing has been logged since {formatCycleDate(cycleStart)}, so this corrects that start instead of stacking a new cycle behind it.</>
+              : <>Counting restarts from this reading on the day the company took it. The cycle you are on now is kept in history.</>}</p>
+          </div>
+          <div className="purchaseFormActions"><button type="submit" disabled={cycleBusy}>{cycleBusy ? <span className="inline-flex items-center gap-2">Starting <Loader variant="dots" size={14} label="Starting new billing cycle" /></span> : "Start cycle"}</button><button className="secondaryButton" type="button" disabled={cycleBusy} onClick={() => setCycleModalOpen(false)}>Cancel</button></div>
           {message && <p className="message" aria-live="polite">{message}</p>}
         </form>
       </MorphingModal>
@@ -512,14 +589,6 @@ function AppBackground({ background, theme, themes: themeOptions }) {
   return <div className="shaderBackdrop" aria-hidden="true"><ShaderBackground key={`${theme}-${background}`} {...props} /></div>;
 }
 
-function ReadingRow({ reading }) {
-  return <article className="ledgerCard">
-    <span>{meterLabel(reading.meter_name)}</span>
-    <strong>{unitsFor(reading.current_reading, reading.previous_reading)} units</strong>
-    <time>{formatRecentDate(reading.created_at ?? reading.reading_date)}</time>
-  </article>;
-}
-
 function MeterGroup({ title, current = false, children }) {
   return <section className={`meterGroup${current ? " current" : ""}`}>
     <header className="meterGroupHead">
@@ -538,8 +607,8 @@ function MeterCard({ meter, activeMeter, onSelect }) {
     onClick={() => onSelect(meter.name)}
   >
     <span className="meterCardTop"><span>{meterLabel(meter.name)}</span></span>
-    <strong>{meter.latest ? meter.units : "—"}<small> units</small></strong>
-    <span className="meterReading">{meter.latest ? `${meter.latest.current_reading} current reading` : "No reading yet"}</span>
+    <strong>{meter.latest ? meter.units : <span className="noValue">—</span>}<small> units</small></strong>
+    <span className="meterReading">{meter.cycle ? `${meter.cycle.latest.current_reading} now · since ${formatCycleDate(meter.cycle.startDate)}` : "No reading yet"}</span>
   </button>;
 
   return active
@@ -560,23 +629,48 @@ function PageHeader({ children, note, leading, trailing, stacked = false }) {
   </header>;
 }
 
-function Readings({ readings, busy, message, onBack, onClear }) {
+function Readings({ meters, readings, busy, message, onBack, onClear }) {
+  const tracked = meters.filter((meter) => meter.cycles.length);
   return <>
     <PageHeader
       leading={<button className="pageIconButton" type="button" onClick={onBack} aria-label="Back to meters">←</button>}
       trailing={<span className="pageCount"><AppNumber value={readings.length} /></span>}
     >
-      All <em>readings.</em>
+      Billing <em>cycles.</em>
     </PageHeader>
-    <section className="history allReadings" aria-label="All meter readings">
+    <section className="history allReadings" aria-label="Meter billing cycles">
       <div className="allReadingsHead">
         <h2>History</h2>
         <button className="clearButton" type="button" disabled={busy} onClick={onClear}>{busy ? <span className="inline-flex items-center gap-2">Clearing <Loader variant="dots" size={12} label="Clearing meter readings" /></span> : "Clear entries"}</button>
       </div>
       {message && <p className="message" aria-live="polite">{message}</p>}
-      {readings.length ? readings.map((reading) => <ReadingRow key={reading.id} reading={reading} />) : <p className="emptyState">No meter readings saved yet.</p>}
+      {tracked.length ? tracked.map((meter) => <section className="cycleMeter" key={meter.name}>
+        <h3>{meterLabel(meter.name)}</h3>
+        {meter.cycles.map((cycle, index) => <CycleCard key={`${meter.name}-${cycle.startDate}`} cycle={cycle} current={Boolean(cycle.live)} endedOn={meter.cycles[index - 1]?.startDate} />)}
+      </section>) : <p className="emptyState">No meter readings saved yet.</p>}
     </section>
   </>;
+}
+
+function CycleCard({ cycle, current, endedOn }) {
+  const [open, setOpen] = useState(current);
+  const closedOn = endedOn ?? (current ? null : cycle.latest.reading_date);
+  const days = cycleDays(cycle.startDate, closedOn ?? today());
+  return <article className={`ledgerCard cycleCard ${bandFor(cycle.units)}`}>
+    <button className="cycleCardHead" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <span className="cycleRange">{formatCycleDate(cycle.startDate)} → {closedOn ? formatCycleDate(closedOn) : "now"}{current ? <b>Running</b> : null}</span>
+      <strong>{cycle.units}<small> units</small></strong>
+      <span className="cycleMeta">{cycle.startReading} → {cycle.latest.current_reading} · {days} {days === 1 ? "day" : "days"}{days ? ` · ${unitsPerDay(cycle.units, days)}/day` : ""}</span>
+      <ChevronDown className="cycleChevron" data-open={open ? "true" : "false"} aria-hidden="true" />
+    </button>
+    {open ? <ul className="cycleEntries">
+      {cycle.entries.map((reading) => <li key={reading.id}>
+        <span>{reading.current_reading}</span>
+        <strong>{unitsFor(reading.current_reading, cycle.startReading)} units</strong>
+        <time>{formatRecentDate(reading.created_at ?? reading.reading_date)}</time>
+      </li>)}
+    </ul> : null}
+  </article>;
 }
 
 function HomeIcon() {
@@ -599,8 +693,18 @@ function MoreIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>;
 }
 
-function Home({ meters, purchases, onNavigate }) {
+function Home({ meters, purchases, readings, onNavigate }) {
   const totalUnits = meters.reduce((sum, meter) => sum + meter.units, 0);
+  // Both ledgers already live in state, so the feed is a second reading of
+  // what is there rather than another round trip.
+  const latest = useMemo(() => {
+    const deltas = readingDeltas(readings);
+    return [
+      ...readings.map((reading) => ({ id: `r-${reading.id}`, at: reading.created_at ?? reading.reading_date, kind: reading.current_reading === reading.previous_reading ? "Cycle start" : "Reading", label: meterLabel(reading.meter_name), value: String(reading.current_reading), delta: deltas.get(reading.id) ?? 0 })),
+      ...purchases.map((purchase) => ({ id: `p-${purchase.id}`, at: purchase.created_at ?? purchase.purchase_date, kind: purchase.category || "Purchase", label: purchase.item_name, value: currency.format(purchase.purchase_price) })),
+    ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 4);
+  }, [readings, purchases]);
+
   return <>
     <PageHeader stacked>Everything, <em>accounted for.</em></PageHeader>
     <section className="homeGrid" aria-label="Ledger overview">
@@ -614,6 +718,16 @@ function Home({ meters, purchases, onNavigate }) {
         <span className="overviewIcon"><BagIcon /></span><small>Purchases</small><strong><AppNumber value={purchases.length} /></strong><span>items in your ledger</span>
       </button>
     </section>
+    <section className="homeFeed" aria-label="Latest activity">
+      <h2>Latest</h2>
+      {latest.length ? <ul>
+        {latest.map((item) => <li key={item.id}>
+          <b>{item.label}</b>
+          <strong>{item.value}{item.delta ? <small className="feedDelta">+{item.delta} added</small> : null}</strong>
+          <span>{item.kind} · {relativeDay(item.at)}</span>
+        </li>)}
+      </ul> : <p className="emptyState">Nothing logged yet. Add a meter reading or a purchase to start the ledger.</p>}
+    </section>
   </>;
 }
 
@@ -621,21 +735,27 @@ function More({ themes, theme, background, onThemeChange, onThemeGenerated, onBa
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [slotId, setSlotId] = useState(theme);
   const [themeName, setThemeName] = useState(themes.find(({ id }) => id === theme)?.name ?? "New theme");
-  const [draft, setDraft] = useState(() => createRandomTheme({ id: theme, name: "New theme" }));
+  const [variants, setVariants] = useState(() => createThemeVariants({ id: theme, name: "New theme" }));
+  const [variantIndex, setVariantIndex] = useState(0);
+  const draft = variants[variantIndex] ?? variants[0];
+  const deal = (item) => {
+    setVariants(createThemeVariants(item));
+    setVariantIndex(0);
+  };
   const openGenerator = () => {
     const item = themes.find(({ id }) => id === theme) ?? themes[0];
     setSlotId(item.id);
     setThemeName(item.name);
-    setDraft(createRandomTheme(item));
+    deal(item);
     setGeneratorOpen(true);
   };
   const chooseSlot = (nextId) => {
     const item = themes.find(({ id }) => id === nextId) ?? themes[0];
     setSlotId(item.id);
     setThemeName(item.name);
-    setDraft(createRandomTheme(item));
+    deal(item);
   };
-  const randomize = () => setDraft(createRandomTheme({ id: slotId, name: themeName.trim() || "New theme" }));
+  const randomize = () => deal({ id: slotId, name: themeName.trim() || "New theme" });
   const saveTheme = (event) => {
     event.preventDefault();
     const nextTheme = { ...draft, id: slotId, name: themeName.trim() || "New theme" };
@@ -664,7 +784,7 @@ function More({ themes, theme, background, onThemeChange, onThemeGenerated, onBa
     </div>
     <MorphingModal viewId={generatorOpen ? "theme-generator" : null} onClose={() => setGeneratorOpen(false)} placement="center" ariaLabel="Generate a random theme" className="ledgerMorphingModal themeGeneratorModal max-w-md">
       <div className="morphingModalHeader">
-        <div><h2>Generate a theme</h2><p>Replace any finish with a fresh two-color pairing.</p></div>
+        <div><h2>Generate a theme</h2><p>Deal six finishes and keep the one you like.</p></div>
         <button type="button" aria-label="Close theme generator" onClick={() => setGeneratorOpen(false)}>×</button>
       </div>
       <form onSubmit={saveTheme}>
@@ -672,10 +792,15 @@ function More({ themes, theme, background, onThemeChange, onThemeGenerated, onBa
         <Input label="Theme name" value={themeName} onChange={setThemeName} maxLength={24} required autoFocus />
         <div className="generatorThemePreview" aria-live="polite" style={{ "--swatch-bg": draft.colors[0], "--swatch-accent": draft.colors[1] }}>
           <span className="themePreview" aria-hidden="true"><i /><i /><i /></span>
-          <div><strong>{themeName.trim() || "New theme"}</strong><small>{draft.note}</small></div>
-          <div className="generatorPalette" aria-label="Generated color pairing">{draft.colors.map((color) => <i key={color} style={{ background: color }} />)}</div>
+          <div><strong>{themeName.trim() || "New theme"}</strong><small>{draft.note}</small><small className="generatorFinish">{draft.finish} · {draft.harmony}</small></div>
+          <div className="generatorPalette" aria-label="Generated palette">{draft.palette.map((color) => <i key={color} style={{ background: color }} />)}</div>
         </div>
-        <div className="purchaseFormActions"><button type="submit">Save theme</button><button className="secondaryButton" type="button" onClick={randomize}><RefreshCw aria-hidden="true" /> Try another</button></div>
+        <div className="generatorVariants" role="radiogroup" aria-label="Generated variations">
+          {variants.map((item, index) => <button className={`generatorVariant${index === variantIndex ? " active" : ""}`} type="button" role="radio" aria-checked={index === variantIndex} aria-label={`${item.finish}: ${item.note}`} key={`${item.finish}-${item.note}-${index}`} onClick={() => setVariantIndex(index)} style={{ "--swatch-bg": item.colors[0], "--swatch-accent": item.colors[1] }}>
+            <span className="themePreview" aria-hidden="true"><i /><i /><i /></span>
+          </button>)}
+        </div>
+        <div className="purchaseFormActions"><button type="submit">Save theme</button><button className="secondaryButton" type="button" onClick={randomize}><RefreshCw aria-hidden="true" /> More variations</button></div>
       </form>
     </MorphingModal>
   </section>;
@@ -700,7 +825,7 @@ function Purchases({ purchases, loading, form, query, busy, message, editingPurc
   };
   return <>
     <PageHeader
-      note={purchases.length ? <><AppNumber value={total} format={formatCurrency} /> across your collection</> : "Your considered collection starts here"}
+      note={purchases.length ? <><strong><AppNumber value={total} format={formatCurrency} /></strong> across your collection</> : "Your considered collection starts here"}
       trailing={<span className="pageCount"><AppNumber value={purchases.length} /></span>}
     >
       Your <em>stash.</em>

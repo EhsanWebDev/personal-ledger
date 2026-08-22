@@ -1,13 +1,19 @@
 "use client";
 // beui.dev/components/motion/number
 
-import { animate, motion, useInView, useReducedMotion } from "motion/react";
+import { animate, useInView, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EASE_OUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
 
 const DIGIT_HEIGHT_EM = 1.1;
 const DIGITS = Array.from({ length: 10 }, (_, n) => n);
+// One digit is exactly a tenth of the ten-digit column. Stepping in percent
+// keeps the roll aligned whatever the font-size resolves to — `em` here was
+// measured against a stale font-size and left digits parked between rows.
+const DIGIT_STEP = 100 / DIGITS.length;
+// Gap between a clipped column's bottom edge and the glyph baseline inside it.
+const BASELINE_DROP_EM = -0.24;
 
 export function NumberTicker({
   value,
@@ -28,8 +34,14 @@ export function NumberTicker({
   const [armed, setArmed] = useState(!startOnView);
 
   useEffect(() => {
-    if (startOnView && inView) setArmed(true);
-  }, [startOnView, inView]);
+    if (!startOnView || armed) return;
+    if (inView) return setArmed(true);
+    // IntersectionObserver never reports while the document is hidden, so a
+    // screen mounted in a backgrounded tab would sit on its placeholder
+    // forever. Arm anyway — the reveal is a flourish, the value is not.
+    const t = window.setTimeout(() => setArmed(true), 400);
+    return () => window.clearTimeout(t);
+  }, [startOnView, inView, armed]);
 
   const text = useMemo(() => {
     const rounded = Math.round(value);
@@ -64,6 +76,11 @@ export function NumberTicker({
   return (
     <span
       ref={containerRef}
+      // The digit columns clip their overflow, so the flex box synthesises its
+      // baseline from their bottom edge and inline tickers ride up like a
+      // superscript. Drop the whole box back onto the text baseline — the nudge
+      // has to live out here, since vertical-align does nothing on a flex item.
+      style={{ verticalAlign: `${BASELINE_DROP_EM}em` }}
       className={cn("inline-flex items-center tabular-nums", className)}>
       <span className="sr-only">{readableText}</span>
       <span aria-hidden="true" className="inline-flex items-center">
@@ -126,15 +143,16 @@ function Digit({
     <span
       className={cn("relative inline-block overflow-hidden", className)}
       style={{ height: `${DIGIT_HEIGHT_EM}em`, width: "1ch" }}>
-      <motion.span
+      {/* The resting offset is plain CSS, not an animated value: a rAF-driven
+          roll never settles while the document is hidden, which left every
+          ticker parked on 0. The transition decorates the change; the
+          transform alone is enough to be correct. */}
+      <span
         ref={columnRef}
-        initial={{ y: 0 }}
-        animate={{ y: `-${digit * DIGIT_HEIGHT_EM}em` }}
-        transition={
-          reduce
-            ? { duration: 0 }
-            : { duration, delay, ease: EASE_OUT }
-        }
+        style={{
+          transform: `translateY(-${digit * DIGIT_STEP}%)`,
+          transition: reduce ? "none" : `transform ${duration}s var(--ease-out) ${delay}s`,
+        }}
         className="absolute inset-x-0 top-0 flex flex-col items-center will-change-[transform,filter]">
         {DIGITS.map((n) => (
           <span
@@ -143,7 +161,7 @@ function Digit({
             {n}
           </span>
         ))}
-      </motion.span>
+      </span>
     </span>
   );
 }

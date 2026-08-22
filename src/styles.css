@@ -42,15 +42,20 @@
   --secondary-foreground: var(--text);
   --muted-foreground: var(--muted);
   --accent-foreground: var(--accent-ink);
-  --destructive: oklch(0.62 0.22 25);
   --border: var(--glass-border);
   --border-strong: color-mix(in oklch, var(--glass-border), var(--text) 12%);
   --input: var(--glass-border);
   --ring: var(--accent);
   --neon: oklch(0.8 0.22 145);
   --violet: oklch(0.68 0.22 295);
-  --success: oklch(0.7 0.18 155);
-  --warning: oklch(0.78 0.18 75);
+  /* Consumption bands have to keep reading as a traffic light, so the hues are
+     fixed and only their tonality is themed: each is seated with a little of
+     the live background. Mixed in oklab, not oklch — oklch interpolates hue
+     round the shorter arc, which dragged the amber warning to coral under the
+     cooler themes. Derived from --bg, so generated themes are covered too. */
+  --success: color-mix(in oklab, oklch(0.76 0.13 155), var(--bg) 14%);
+  --warning: color-mix(in oklab, oklch(0.80 0.155 66), var(--bg) 14%);
+  --destructive: color-mix(in oklab, oklch(0.68 0.18 27), var(--bg) 10%);
   --glass-bg: var(--glass);
   --glass-strong-bg: color-mix(in oklch, var(--surface-solid), transparent 18%);
   --glass-thin-bg: color-mix(in oklch, var(--bg), transparent 45%);
@@ -446,6 +451,12 @@ button {
   text-wrap: pretty;
 }
 
+.pageMastNote strong {
+  color: var(--heading);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
 .pageStat {
   display: grid;
   height: 44px;
@@ -507,7 +518,7 @@ button {
 
 .homeGrid button {
   display: grid;
-  min-height: 190px;
+  min-height: 168px;
   padding: 16px;
   border: 1px solid rgba(238, 245, 234, 0.12);
   border-radius: 18px;
@@ -517,9 +528,34 @@ button {
   transition: transform 320ms var(--ease-out), border-color 320ms ease;
 }
 
+/* The workday tile carries a fixed target, not a live figure, so it reads as
+   one compact row instead of taking the most height on the screen. */
 .homeGrid .timeOverview {
   grid-column: 1 / -1;
-  min-height: 150px;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 14px;
+  padding: 14px 16px;
+}
+
+.homeGrid .timeOverview > span:first-child {
+  grid-area: 1 / 1 / 3 / 2;
+}
+
+.homeGrid .timeOverview small {
+  grid-area: 1 / 2 / 2 / 3;
+  align-self: end;
+}
+
+.homeGrid .timeOverview strong {
+  grid-area: 1 / 3 / 3 / 4;
+  align-self: center;
+  font-size: 30px;
+}
+
+.homeGrid .timeOverview > span:last-child {
+  grid-area: 2 / 2 / 3 / 3;
 }
 
 .homeGrid button:active {
@@ -527,7 +563,7 @@ button {
 }
 
 .homeGrid button:hover {
-  border-color: rgba(240, 196, 72, 0.35);
+  border-color: rgba(var(--accent-rgb), 0.35);
 }
 
 .overviewIcon {
@@ -557,6 +593,71 @@ button {
 .morePanel > p:last-child {
   color: #8fa095;
   font-size: 12px;
+}
+
+/* Hairlines, not another stack of rounded cards: the tiles above are already
+   carrying that texture, and the feed reads faster as a plain list. */
+.homeFeed {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.homeFeed h2 {
+  padding-left: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.homeFeed ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.homeFeed li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 3px 12px;
+  padding: 11px 2px;
+  border-bottom: 1px solid color-mix(in oklch, var(--glass-border), transparent 50%);
+}
+
+.homeFeed li:last-child {
+  border-bottom: 0;
+}
+
+.homeFeed b {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.homeFeed strong {
+  color: var(--heading);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.feedDelta {
+  margin-left: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.homeFeed li span {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .morePanel {
@@ -810,7 +911,7 @@ button {
 .generatorPalette {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
 }
 
@@ -819,6 +920,36 @@ button {
   border-radius: 999px;
   outline: 1px solid oklch(1 0 0 / 0.1);
   outline-offset: -1px;
+}
+
+.generatorThemePreview small.generatorFinish { color: rgba(var(--accent-rgb), 0.9); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.generatorVariants {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.generatorVariant {
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.1);
+  cursor: pointer;
+  transition-property: transform, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.generatorVariant .themePreview { height: 54px; padding: 7px; gap: 4px; border-radius: 16px; }
+.generatorVariant .themePreview i { border-radius: 5px; }
+.generatorVariant:active { transform: scale(0.94); }
+.generatorVariant.active { box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.75), 0 8px 22px rgba(var(--accent-rgb), 0.16); }
+
+@media (prefers-reduced-motion: reduce) {
+  .generatorVariant { transition-property: box-shadow; }
+  .generatorVariant:active { transform: none; }
 }
 
 .themeGeneratorModal .secondaryButton {
@@ -842,6 +973,8 @@ button {
   .themeGenerateButton { padding-inline: 10px 12px; }
   .generatorThemePreview { grid-template-columns: 92px minmax(0, 1fr); }
   .generatorThemePreview .themePreview { width: 92px; }
+  .generatorVariants { gap: 6px; }
+  .generatorVariant .themePreview { height: 46px; padding: 6px; }
 }
 
 /* Theme layer keeps the existing ledger components coherent without duplicating them. */
@@ -918,83 +1051,130 @@ h1 span {
   text-transform: uppercase;
 }
 
-.limitStrip {
+.cycleStrip {
+  margin: 2px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.cycleStrip strong {
+  color: var(--heading);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* The gauge answers one question — how much room is left under the slab — so
+   the headroom is the headline and the bar only earns colour as it runs out. */
+.limitGauge {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-  color: #8fa095;
+  gap: 9px;
+  margin: 2px 0 20px;
+  --band: var(--success);
+}
+
+.limitGauge[data-band="edge"] { --band: var(--warning); }
+.limitGauge[data-band="danger"] { --band: var(--destructive); }
+
+.limitGaugeHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
   font-size: 12px;
 }
 
-.limitStrip div {
-  position: relative;
-  height: 12px;
-  border: 1px solid rgba(238, 245, 234, 0.22);
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, transparent 0 86%, #f0c448 86% 91%, #f05a4f 91%),
-    transparent;
-  overflow: visible;
+.limitGaugeHead strong {
+  color: var(--band);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  transition: color 420ms ease;
 }
 
-.limitStrip i {
+.limitGaugeHead b {
+  flex: 0 0 auto;
+  color: var(--heading);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.limitGaugeHead b i {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.limitGaugeTrack {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text) 13%, transparent);
+  box-shadow: inset 0 1px rgba(0, 0, 0, 0.28);
+}
+
+.limitGaugeTrack > i {
   display: block;
-  width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: #4fdf7a;
+  background: var(--band);
   transform: scaleX(var(--fill));
   transform-origin: left;
-  transition: transform 200ms var(--ease-in-out);
+  transition: transform 480ms var(--ease-out), background-color 420ms ease;
 }
 
-.limitStrip b {
+.limitGaugeTrack > b {
   position: absolute;
-  top: 15px;
+  top: -4px;
+  bottom: -4px;
+  left: var(--at);
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--text) 42%, transparent);
+}
+
+.limitGaugeTrack > b span {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
   transform: translateX(-50%);
-  color: #c5d0c8;
-  font-size: 11px;
 }
 
 .meterCabinet {
   display: grid;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 20px;
+  margin-top: 4px;
 }
 
+/* The meters are the objects on this screen, so the groups get no panel of
+   their own — a glass card wrapped round each pair only put a second border
+   between the reader and the number. */
 .meterGroup {
   display: grid;
-  gap: 14px;
-  overflow: clip;
-  border: 1px solid var(--glass-border);
-  border-radius: 28px;
-  padding: 18px;
-  background: color-mix(in oklch, var(--glass), transparent 12%);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12), inset 0 1px rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px) saturate(135%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%);
-}
-
-.meterGroup.current {
-  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), transparent 54%), color-mix(in oklch, var(--glass), transparent 8%);
-  box-shadow: 0 22px 50px rgba(var(--accent-rgb), 0.08), inset 0 1px rgba(255, 255, 255, 0.1);
+  gap: 9px;
 }
 
 .meterGroupHead {
   display: flex;
-  align-items: end;
+  align-items: baseline;
   justify-content: space-between;
   gap: 18px;
+  padding-left: 2px;
 }
 
 .meterGroupHead h2 {
-  color: var(--heading);
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .meterPair {
@@ -1083,63 +1263,6 @@ h1 span {
   align-self: end;
 }
 
-.meterInstall {
-  display: grid;
-  min-height: 132px;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
-  border: 1px dashed color-mix(in oklch, var(--glass-border), var(--accent) 24%);
-  border-radius: 18px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.meterInstall > div {
-  display: grid;
-  gap: 4px;
-}
-
-.meterInstall strong {
-  color: var(--heading);
-  font-size: 14px;
-}
-
-.meterInstall small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.installSignal {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.1);
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.16);
-}
-
-.installSignal i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0.1);
-}
-
-.installBadge {
-  border-radius: 999px;
-  padding: 6px 9px;
-  color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.09);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
 .panelHead {
   display: flex;
   align-items: center;
@@ -1156,7 +1279,7 @@ form {
 label {
   display: grid;
   gap: 7px;
-  color: #c5d0c8;
+  color: var(--text);
   font-size: 13px;
   font-weight: 700;
 }
@@ -1310,14 +1433,37 @@ input[type="number"]::-webkit-outer-spin-button {
   text-align: center;
 }
 
+.previousReading > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cycleChangeButton {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cycleChangeButton:disabled {
+  opacity: 0.5;
+}
+
 .previousReading output {
   display: grid;
   min-height: 52px;
   place-items: center;
-  border: 1px solid var(--input);
+  border: 1px dashed color-mix(in oklch, var(--input), transparent 30%);
   border-radius: 10px;
   color: var(--muted);
-  background: var(--glass-thin-bg);
+  background: transparent;
   font-size: 20px;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -1341,6 +1487,17 @@ input[type="number"]::-webkit-outer-spin-button {
   transition: color 180ms var(--ease-out);
 }
 
+/* One band colour runs through the readout and the track, so the slider shows
+   how close the reading is to the slab as well as telling you. */
+.unitSliderField { --band: var(--success); }
+.unitSliderField[data-band="calm"] { --band: var(--success); }
+.unitSliderField[data-band="edge"] { --band: var(--warning); }
+.unitSliderField[data-band="danger"] { --band: var(--destructive); }
+
+.unitSliderField[data-band] {
+  --slider-fill: color-mix(in oklab, var(--band), transparent 70%);
+}
+
 .unitSliderValue[data-band="calm"] strong {
   color: var(--success);
 }
@@ -1351,6 +1508,27 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .unitSliderValue[data-band="danger"] strong {
   color: var(--destructive);
+}
+
+.cycleResetField {
+  display: grid;
+  gap: 12px;
+  padding: 4px 0 12px;
+}
+
+.cycleResetField label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cycleResetNote {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .unitSliderLimits {
@@ -1378,10 +1556,10 @@ button[type="submit"] {
 
 .purchaseFormActions .secondaryButton {
   min-height: 42px;
-  border: 1px solid rgba(238, 245, 234, 0.18);
+  border: 1px solid color-mix(in oklch, var(--glass-border), var(--text) 8%);
   border-radius: 8px;
-  color: #eef5ea;
-  background: #243128;
+  color: var(--text);
+  background: color-mix(in oklch, var(--surface-solid), var(--text) 6%);
   font-weight: 800;
 }
 
@@ -1406,7 +1584,7 @@ button[type="submit"] {
 @media (hover: hover) and (pointer: fine) {
   .purchaseFab:hover {
     transform: translateY(-3px);
-    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.38), 0 7px 22px rgba(240, 196, 72, 0.26), inset 0 1px rgba(255, 255, 255, 0.55);
+    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.38), 0 7px 22px rgba(var(--accent-rgb), 0.26), inset 0 1px rgba(255, 255, 255, 0.55);
   }
 }
 
@@ -1474,7 +1652,7 @@ button:disabled {
 }
 
 .message {
-  color: #c5d0c8;
+  color: var(--text);
   font-size: 13px;
 }
 
@@ -1545,6 +1723,7 @@ button:disabled {
 
 .allReadings {
   gap: 10px;
+  padding-bottom: 104px;
 }
 
 .allReadingsHead {
@@ -1554,20 +1733,163 @@ button:disabled {
   gap: 12px;
 }
 
+/* Wiping every cycle is the rarest action in the app; it does not need to hold
+   the second-loudest spot on the screen the whole time it is not being used. */
 .clearButton {
   min-height: 40px;
-  border: 1px solid rgba(240, 90, 79, 0.38);
-  border-radius: 8px;
-  padding: 0 12px;
-  color: #ffc2ba;
-  background: rgba(58, 25, 24, 0.72);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--muted);
+  background: color-mix(in oklch, var(--surface-solid), transparent 22%);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 800;
+  transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }
 
-.clearButton:hover {
-  border-color: rgba(240, 90, 79, 0.72);
-  background: #3a1918;
+.clearButton:hover,
+.clearButton:focus-visible {
+  border-color: color-mix(in oklab, var(--destructive), transparent 55%);
+  color: var(--destructive);
+  background: color-mix(in oklab, var(--destructive), transparent 88%);
+}
+
+.cycleMeter {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.cycleMeter h3 {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.history .cycleCard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cycleCardHead {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.cycleRange {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--heading);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cycleRange b {
+  border: 1px solid rgba(var(--accent-rgb), 0.42);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cycleCardHead strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  white-space: nowrap;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cycleCard.edge .cycleCardHead strong {
+  color: var(--warning);
+}
+
+.cycleCard.danger .cycleCardHead strong {
+  color: var(--destructive);
+}
+
+.cycleCardHead strong small {
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cycleMeta {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cycleChevron {
+  width: 18px;
+  height: 18px;
+  grid-row: 1 / 3;
+  grid-column: 3;
+  color: var(--muted);
+  transition: transform 220ms var(--ease-out);
+}
+
+.cycleChevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.cycleEntries {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.cycleEntries li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 10px 16px;
+  background: color-mix(in oklch, var(--surface-solid), transparent 55%);
+}
+
+.cycleEntries li > span {
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.cycleEntries li strong {
+  justify-self: end;
+  color: var(--heading);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cycleEntries li time {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .search {
@@ -1602,10 +1924,13 @@ button:disabled {
 .categoryFilters {
   display: flex;
   gap: 7px;
-  margin: 4px -18px 6px;
-  padding: 4px 18px 8px;
+  margin: 4px -16px 6px;
+  padding: 4px 16px 8px;
   overflow-x: auto;
   scrollbar-width: none;
+  /* The rail only ever overflows to the right, so only that edge fades —
+     masking both would dim the resting "All" chip for no reason. */
+  mask-image: linear-gradient(90deg, #000 0 calc(100% - 34px), transparent 100%);
 }
 
 .categoryFilters::-webkit-scrollbar {
@@ -1615,20 +1940,18 @@ button:disabled {
 .categoryFilters button {
   flex: 0 0 auto;
   min-height: 34px;
-  border: 1px solid rgba(238, 245, 234, 0.12);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 0 13px;
-  color: #aebbb3;
-  background: rgba(24, 33, 29, 0.74);
+  color: var(--muted);
+  background: color-mix(in oklch, var(--surface-solid), transparent 22%);
   font-size: 12px;
   font-weight: 800;
   transition: color 260ms ease, background 260ms ease;
 }
 
 .categoryFilters button.active {
-  border-color: rgba(240, 196, 72, 0.45);
-  color: #101412;
-  background: #f0c448;
+  border-color: rgba(var(--accent-rgb), 0.45);
 }
 
 .purchaseCards {
@@ -1701,18 +2024,18 @@ button:disabled {
   transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
-.purchaseCardActions button.danger {
-  color: #ff6b63;
+/* Delete is the rarest thing anyone does here, so it rests as quiet as edit
+   and only turns destructive once it is actually the target. */
+.purchaseCardActions button.danger:hover,
+.purchaseCardActions button.danger:focus-visible {
+  color: var(--destructive);
+  background: color-mix(in oklab, var(--destructive), transparent 86%);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .purchaseCardActions button:hover {
     color: var(--heading);
     background: rgba(255, 255, 255, 0.1);
-  }
-
-  .purchaseCardActions button.danger:hover {
-    color: #ff8983;
   }
 }
 
@@ -1743,11 +2066,22 @@ button:disabled {
   font-weight: 800;
 }
 
+/* The app's "nothing logged yet" glyph. Set at a display size an em dash reads
+   as a rule or a strikethrough, so it is always sized down and left untracked
+   wherever it stands in for a value. */
+.noValue {
+  color: var(--muted);
+  font-size: 0.6em;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: 0.1em;
+}
+
 .emptyState {
   padding: 18px;
-  border: 1px dashed rgba(238, 245, 234, 0.18);
+  border: 1px dashed color-mix(in oklch, var(--glass-border), var(--text) 8%);
   border-radius: 8px;
-  color: #aebbb3;
+  color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -1856,6 +2190,14 @@ h1 span,
   color: var(--heading);
 }
 
+.meterCard.edge strong {
+  color: var(--warning);
+}
+
+.meterCard.danger strong {
+  color: var(--destructive);
+}
+
 .eyebrow,
 .textButton,
 .purchaseCount,
@@ -1916,10 +2258,6 @@ button[type="submit"],
   color: var(--muted);
 }
 
-.limitStrip div {
-  background: linear-gradient(90deg, transparent 0 86%, var(--accent) 86% 91%, #f05a4f 91%), transparent;
-}
-
 :focus-visible {
   outline-color: var(--accent);
 }
@@ -1943,7 +2281,9 @@ button[type="submit"],
     will-change: auto;
   }
 
-  .limitStrip i {
+  .limitGaugeTrack > i,
+  .limitGaugeHead strong,
+  .cycleChevron {
     transition: none;
   }
 
@@ -2144,6 +2484,18 @@ button.ledgerCard:active {
   transform: scale(0.96);
 }
 
+.ledgerCard.meterCard.edge {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 55%),
+    color-mix(in oklch, var(--card-surface), var(--warning) 16%);
+}
+
+.ledgerCard.meterCard.danger {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 55%),
+    color-mix(in oklch, var(--card-surface), var(--destructive) 20%);
+}
+
 .ledgerCard.meterCard.active,
 .ledgerCard.backgroundCard.active,
 .ledgerCard.themeCard.active {
@@ -2235,20 +2587,6 @@ button.ledgerCard:active {
     border-radius: 14px;
   }
 
-  .limitStrip b:first-of-type {
-    transform: translateX(-115%);
-  }
-
-  .limitStrip b:last-of-type {
-    transform: translateX(15%);
-  }
-
-  .meterGroup {
-    border-radius: 24px;
-    gap: 10px;
-    padding: 12px;
-  }
-
   .meterCard {
     min-width: 0;
     min-height: 108px;
@@ -2271,23 +2609,6 @@ button.ledgerCard:active {
 
   .meterCardTop > span {
     color: var(--text);
-  }
-
-  .meterInstall {
-    min-height: 108px;
-    grid-template-columns: 1fr;
-    align-content: center;
-    gap: 6px;
-    padding: 12px;
-  }
-
-  .meterInstall .installSignal {
-    display: none;
-  }
-
-  .meterInstall .installBadge {
-    justify-self: start;
-    padding: 5px 7px;
   }
 
   .pageMast .pageHeaderActions {

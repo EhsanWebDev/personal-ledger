@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { NumberTicker } from "@/components/motion/number-ticker";
 import { Loader } from "@/components/motion/loader";
 import { supabase } from "./supabase";
@@ -42,7 +41,7 @@ function DurationNumber({ value, short = false }) {
 }
 
 function ClockNumber({ value }) {
-  return value ? <NumberTicker value={new Date(value).getTime()} duration={0.55} format={formatClock} /> : "—";
+  return value ? <NumberTicker value={new Date(value).getTime()} duration={0.55} format={formatClock} /> : <span className="noValue">—</span>;
 }
 
 function formatDate(value) {
@@ -197,25 +196,6 @@ export function TimeTracker({ showToast, updateToast }) {
       </div>
     </header>
 
-    {active ? <div className="flex justify-center">
-      <DynamicIsland view={active.status}>
-        <DynamicIslandView id="clocked_in" className="gap-3 px-5 py-3">
-          <span className="grid size-9 place-items-center rounded-full bg-background/10"><ClockIcon /></span>
-          <span className="flex min-w-32 flex-col">
-            <small className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-60">Working</small>
-            <strong className="text-lg font-bold leading-tight tabular-nums"><DurationNumber value={today.worked_seconds} /></strong>
-          </span>
-        </DynamicIslandView>
-        <DynamicIslandView id="on_break" className="gap-3 px-5 py-3">
-          <span className="grid size-9 place-items-center rounded-full bg-warning text-background"><PauseIcon /></span>
-          <span className="flex min-w-32 flex-col">
-            <small className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-60">On break</small>
-            <strong className="text-lg font-bold leading-tight tabular-nums"><DurationNumber value={today.worked_seconds} /></strong>
-          </span>
-        </DynamicIslandView>
-      </DynamicIsland>
-    </div> : null}
-
     {!display.is_weekday && !active && <aside className="weekendNotice" role="status">
       <CalendarIcon />
       <div><strong>Weekend mode</strong><span>Clock in opens again on Monday. Your history is still available.</span></div>
@@ -339,10 +319,6 @@ function BackIcon() {
 
 function PlayIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5Z" /></svg>;
-}
-
-function ClockIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 1.5" /></svg>;
 }
 
 function PauseIcon() {
