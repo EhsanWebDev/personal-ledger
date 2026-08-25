@@ -147,11 +147,9 @@ export function TimeTracker({ showToast, updateToast }) {
       const { error } = await supabase.rpc(rpc, args);
       if (error) throw error;
       await sync();
-      setMessage(`${label} recorded.`);
       updateToast(toastId, { title: successTitle, description: successDescription, status: "success", duration: 4200, dismissible: true });
     } catch (error) {
       const description = error.message || `${label} could not be recorded.`;
-      setMessage(description);
       updateToast(toastId, { title: `${label} failed`, description, status: "error", duration: 5200, dismissible: true });
       await sync();
     } finally {
@@ -223,7 +221,7 @@ export function TimeTracker({ showToast, updateToast }) {
               {active?.status === "on_break" && <ActionButton tone="primary" label="Resume" icon={<PlayIcon />} disabled={!canChange} busy={busy === "resume"} onClick={() => runAction("resume")} />}
               {active && <ActionButton tone="quiet" label="Clock Out" icon={<StopIcon />} disabled={!canChange} busy={busy === "clockOut"} onClick={() => runAction("clockOut")} />}
             </div>
-            {message || !online ? <p className="timeMessage" aria-live="polite">{message || "Offline"}</p> : null}
+            {!online ? <p className="timeMessage" aria-live="polite">Offline</p> : null}
           </div>
         </article>
       </div>
